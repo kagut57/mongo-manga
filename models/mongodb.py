@@ -46,8 +46,8 @@ class MangaPicture:
         self.url = url
 
 class DB:
-    def __init__(self, mongo_url: str = 'mongodb://localhost:27017'):
-        self.client = AsyncIOMotorClient(mongo_url)
+    def __init__(self, mongo_url: str):
+        self.client = AsyncIOMotorClient(mongo_url, 27017)
         self.db = self.client['manga_db']
         self.chapter_files = self.db['chapter_files']
         self.manga_outputs = self.db['manga_outputs']
@@ -57,10 +57,7 @@ class DB:
         self.manga_pictures = self.db['manga_pictures']
 
     async def connect(self):
-        try:
-            await self.client.server_info()
-        except ServerSelectionTimeoutError:
-            sys.exit(logging.critical("Can't connect to MongoDB! Exiting..."))
+        pass
 
     async def add(self, other):
         if isinstance(other, ChapterFile):
