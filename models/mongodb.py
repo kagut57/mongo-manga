@@ -18,7 +18,7 @@ class ChapterFile:
         self.telegraph_url = telegraph_url
 
 class MangaOutput:
-    def __init__(self, user_id: str, output: int):
+    def __init__(self, user_id: str, output: int, _id: Optional[str] = None):
         self.user_id = user_id
         self.output = output
 
