@@ -1,6 +1,7 @@
 import os
 from typing import List, Optional, Type, TypeVar
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import ServerSelectionTimeoutError
 from pymongo import MongoClient
 
 T = TypeVar("T")
@@ -46,7 +47,7 @@ class MangaPicture:
 
 class DB:
     def __init__(self, mongo_url: str = 'mongodb://localhost:27017'):
-        self.client = AsyncIOMotorClient(mongo_url, 27017)
+        self.client = AsyncIOMotorClient(mongo_url)
         self.db = self.client['manga_db']
         self.chapter_files = self.db['chapter_files']
         self.manga_outputs = self.db['manga_outputs']
@@ -56,8 +57,10 @@ class DB:
         self.manga_pictures = self.db['manga_pictures']
 
     async def connect(self):
-        # No need to create collections explicitly in MongoDB
-        pass
+        try:
+            await self.client.server_info()
+        except ServerSelectionTimeoutError:
+            sys.exit(logging.critical("Can't connect to MongoDB! Exiting..."))
 
     async def add(self, other):
         if isinstance(other, ChapterFile):
