@@ -103,24 +103,24 @@ class DB:
                 upsert=True 
             )
 
-    async def get(self, table: Type[T], id):
+    async def get(self, table: Type[T], _id):
         if table == ChapterFile:
-            result = await self.chapter_files.find_one({"$or": [{"file_unique_id": id}, {"cbz_unique_id": id}, {"telegraph_url": id}]})
+            result = await self.chapter_files.find_one({"$or": [{"file_unique_id": _id}, {"cbz_unique_id": _id}, {"telegraph_url": _id}]})
             return ChapterFile(**result) if result else None
         elif table == MangaOutput:
-            result = await self.manga_outputs.find_one({"user_id": id})
+            result = await self.manga_outputs.find_one({"user_id": _id})
             return MangaOutput(**result) if result else None
         elif table == Subscription:
-            result = await self.subscriptions.find_one({"url": id[0], "user_id": id[1]})
+            result = await self.subscriptions.find_one({"url": _id, "user_id": _id})
             return Subscription(**result) if result else None
         elif table == LastChapter:
-            result = await self.last_chapters.find_one({"url": id})
+            result = await self.last_chapters.find_one({"url": _id})
             return LastChapter(**result) if result else None
         elif table == MangaName:
-            result = await self.manga_names.find_one({"url": id})
+            result = await self.manga_names.find_one({"url": _id})
             return MangaName(**result) if result else None
         elif table == MangaPicture:
-            result = await self.manga_pictures.find_one({"manga_url": id})
+            result = await self.manga_pictures.find_one({"manga_url": _id})
             return MangaPicture(**result) if result else None
 
     async def get_all(self, table: Type[T]):
