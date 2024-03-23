@@ -218,6 +218,8 @@ async def on_subs(client: Client, message: Message):
 
     subs = await db.get_subs(str(message.from_user.id), filter_list)
 
+    print("Subscriptions:", subs)  # Add this line for debugging
+
     lines = []
     for sub in subs[:10]:
         lines.append(f'<a href="{sub.url}">{sub.name}</a>')
