@@ -106,7 +106,7 @@ class DB:
     async def get(self, table: Type[T], id):
         if table == ChapterFile:
             result = await self.chapter_files.find_one({"$or": [{"file_unique_id": id}, {"cbz_unique_id": id}, {"telegraph_url": id}]})
-            return ChapterFile(**result) if result else None
+            return ChapterFile(result) if result else None
         elif table == MangaOutput:
             result = await self.manga_outputs.find_one({"user_id": id})
             return MangaOutput(**result) if result else None
