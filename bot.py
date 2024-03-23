@@ -475,7 +475,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
 
     if download:
         shutil.rmtree(pictures_folder, ignore_errors=True)
-        await db.add(ChapterFile(chapter_file))
+        await db.add(chapter_file)
 
 
 async def pagination_click(client: Client, callback: CallbackQuery):
