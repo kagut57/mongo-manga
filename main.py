@@ -6,8 +6,11 @@ from models import DB
 from config import mongo_url
 
 async def async_main():
-    db = DB(mongo_url)
-    await db.connect()
+    try:
+        db = DB(mongo_url)
+        await db.connect()
+    except Exception as e:
+        logger.error(f"Error connecting to the database: {e}")
 
 if __name__ == '__main__':
     loop = aio.get_event_loop_policy().get_event_loop()
