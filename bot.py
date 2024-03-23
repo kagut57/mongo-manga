@@ -632,7 +632,10 @@ async def update_mangas():
             manga_name = manga_dict[url].name
             if url not in chapters_dictionary:
                 agen = client.iter_chapters(url, manga_name)
-                last_chapter = await anext(agen)
+                if agen:
+                    last_chapter = agen[0]
+                else:
+                    pass
                 await db.add(LastChapter(url=url, chapter_url=last_chapter.url))
                 await asyncio.sleep(10)
             else:
