@@ -156,14 +156,18 @@ class DB:
         return ChapterFile(**result) if result else None
 
     async def get_subs(self, user_id: str, filters=None):
+        filters = filters or []
         query = {"user_id": user_id}
         if filters:
-            filter_regex = "|".join([f".*{f}.*" for f in filters])
-            query.update({"$or": [{"name": {"$regex": filter_regex, "$options": "i"}}, {"url": {"$regex": filter_regex, "$options": "i"}}]})
-        return [MangaName(**result) for result in await self.manga_names.find(query).to_list(None)]
+            query["$or"] = [{"name": {"$regex": f".*{filter_}.*", "$options": "i"}}, {"url": {"$regex": f".*{filter_}.*", "$options": "i"}}]
+        subs = await self.subscriptions.find({"user_id": user_id}).to_list(length=None)
+        urls = [sub["url"] for sub in subs]
+        return await self.manga_names.find({"url": {"$in": urls}}).to_list(length=None)
 
     async def get_subs_by_url(self, url: str):
-        return [MangaName(**result) for result in await self.manga_names.find({"url": url}).to_list(None)]
+        subs = await self.subscriptions.find({"url": url}).to_list(length=None)
+        urls = [sub["url"] for sub in subs]
+        return await self.manga_names.find({"url": {"$in": urls}}).to_list(length=None)
 
     async def erase_subs(self, user_id: str):
         await self.subscriptions.delete_many({"user_id": user_id})
