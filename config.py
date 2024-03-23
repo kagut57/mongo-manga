@@ -9,4 +9,4 @@ if os.path.exists(env_file):
 else:
     env_vars = dict(os.environ)
 
-mongo_url = env_vars.get('DATABASE_URL_PRIMARY') or env_vars.get('DATABASE_URL') or 'mongodb://localhost:27017'
+mongo_url = env_vars.get('MONGODB_URL') or env_vars.get('DATABASE_URL') or 'mongodb://localhost:27017'
