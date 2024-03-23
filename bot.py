@@ -123,7 +123,7 @@ bot = Client('bot',
 pdf_queue = AQueue()
 
 if dbname:
-    DB(dbname)
+    DB(mongo_url)
 else:
     DB()
 
