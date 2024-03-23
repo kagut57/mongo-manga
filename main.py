@@ -2,7 +2,7 @@ import asyncio as aio
 import os
 from logger import logger
 from bot import bot, manga_updater, chapter_creation
-from models.mongodb import DB
+from models import DB
 
 async def async_main():
     db = DB()
