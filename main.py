@@ -3,9 +3,10 @@ import os
 from logger import logger
 from bot import bot, manga_updater, chapter_creation
 from models import DB
+from config import mongo_url
 
 async def async_main():
-    db = DB()
+    db = DB(mongo_url)
     await db.connect()
 
 if __name__ == '__main__':
