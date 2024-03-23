@@ -576,7 +576,7 @@ async def remove_subscriptions(sub: str):
 
 async def update_mangas():
     logger.debug("Updating mangas")
-    db = DB(mongo_url)
+    db = DB()
     subscriptions = await db.get_all(Subscription)
     last_chapters = await db.get_all(LastChapter)
     manga_names = await db.get_all(MangaName)
