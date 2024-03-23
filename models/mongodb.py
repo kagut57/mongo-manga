@@ -67,17 +67,41 @@ class DB:
 
     async def add(self, other):
         if isinstance(other, ChapterFile):
-            await self.chapter_files.insert_one(other.__dict__)
+            await self.chapter_files.update_one(
+                {"_id": other._id},
+                {"$set": other.__dict__},
+                upsert=True 
+            )
         elif isinstance(other, MangaOutput):
-            await self.manga_outputs.insert_one(other.__dict__)
+            await self.manga_outputs.update_one(
+                {"_id": other._id},
+                {"$set": other.__dict__},
+                upsert=True 
+            )
         elif isinstance(other, Subscription):
-            await self.subscriptions.insert_one(other.__dict__)
+            await self.subscriptions.update_one(
+                {"_id": other._id},
+                {"$set": other.__dict__},
+                upsert=True 
+            )
         elif isinstance(other, LastChapter):
-            await self.last_chapters.insert_one(other.__dict__)
+            await self.last_chapters.update_one(
+                {"_id": other._id},
+                {"$set": other.__dict__},
+                upsert=True 
+            )
         elif isinstance(other, MangaName):
-            await self.manga_names.insert_one(other.__dict__)
+            await self.manga_names.update_one(
+                {"_id": other._id},
+                {"$set": other.__dict__},
+                upsert=True 
+            )
         elif isinstance(other, MangaPicture):
-            await self.manga_pictures.insert_one(other.__dict__)
+            await self.manga_pictures.update_one(
+                {"_id": other._id},
+                {"$set": other.__dict__},
+                upsert=True 
+            )
 
     async def get(self, table: Type[T], id):
         if table == ChapterFile:
