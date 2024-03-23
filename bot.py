@@ -23,7 +23,7 @@ from pyrogram import Client, filters
 from typing import Dict, Tuple, List, TypedDict
 from loguru import logger
 
-from models.db import DB, ChapterFile, Subscription, LastChapter, MangaName, MangaOutput
+from models.mongodb import DB, ChapterFile, Subscription, LastChapter, MangaName, MangaOutput
 from pagination import Pagination
 from plugins.client import clean
 from tools.aqueue import AQueue
