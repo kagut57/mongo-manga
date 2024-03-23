@@ -46,7 +46,7 @@ class MangaPicture:
 
 class DB:
     def __init__(self, mongo_url: str = 'mongodb://localhost:27017'):
-        self.client = AsyncIOMotorClient(mongo_url)
+        self.client = AsyncIOMotorClient(mongo_url, 27017)
         self.db = self.client['manga_db']
         self.chapter_files = self.db['chapter_files']
         self.manga_outputs = self.db['manga_outputs']
