@@ -478,6 +478,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
 
     if download:
         shutil.rmtree(pictures_folder, ignore_errors=True)
+        print(f"{chapter_file}")
         await db.add(chapter_file)
 
 
