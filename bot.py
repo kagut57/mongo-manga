@@ -198,7 +198,7 @@ async def on_refresh(client: Client, message: Message):
     if not (message.reply_to_message and message.reply_to_message.outgoing and
             ((document and document.file_name[-4:].lower() in ['.pdf', '.cbz']) or match)):
         return await message.reply("This command only works when it replies to a manga file that bot sent to you")
-    db = DB()
+    db = DB(mongo_url)
     if document:
         chapter = await db.get_chapter_file_by_id(document.file_unique_id)
     else:
@@ -211,7 +211,7 @@ async def on_refresh(client: Client, message: Message):
 
 @bot.on_message(filters=filters.command(['subs']))
 async def on_subs(client: Client, message: Message):
-    db = DB()
+    db = DB(mongo_url)
 
     filter_ = message.text.split(maxsplit=1)[1] if message.text.split(maxsplit=1)[1:] else ''
     filter_list = [filter_.strip() for filter_ in filter_.split(' ') if filter_.strip()]
@@ -235,7 +235,7 @@ async def on_subs(client: Client, message: Message):
 
 @bot.on_message(filters=filters.regex(r'^/cancel ([^ ]+)$'))
 async def on_cancel_command(client: Client, message: Message):
-    db = DB()
+    db = DB(mongo_url)
     sub = await db.get(Subscription, (message.matches[0].group(1), str(message.from_user.id)))
     if not sub:
         return await message.reply("You were not subscribed to that manga.")
@@ -245,7 +245,7 @@ async def on_cancel_command(client: Client, message: Message):
 
 @bot.on_message(filters=filters.command(['options']))
 async def on_options_command(client: Client, message: Message):
-    db = DB()
+    db = DB(mongo_url)
     user_options = await db.get(MangaOutput, str(message.from_user.id))
     user_options = user_options.output if user_options else (1 << 30) - 1
     buttons = get_buttons_for_options(user_options)
@@ -269,7 +269,7 @@ async def on_message(client, message: Message):
 
 
 async def options_click(client, callback: CallbackQuery):
-    db = DB()
+    db = DB(mongo_url)
     user_options = await db.get(MangaOutput, str(callback.from_user.id))
     if not user_options:
         user_options = MangaOutput(user_id=str(callback.from_user.id), output=(2 << 30) - 1)
@@ -332,7 +332,7 @@ async def manga_click(client, callback: CallbackQuery, pagination: Pagination = 
         chapters[result.unique()] = result
         full_pages[full_page_key].append(result.unique())
 
-    db = DB()
+    db = DB(mongo_url)
     subs = await db.get(Subscription, (pagination.manga.url, str(callback.from_user.id)))
 
     prev = [InlineKeyboardButton('<<', f'{pagination.id}_{pagination.page - 1}')]
@@ -391,7 +391,7 @@ async def chapter_click(client, data, chat_id):
 
 
 async def send_manga_chapter(client: Client, chapter, chat_id):
-    db = DB()
+    db = DB(mongo_url)
 
     chapter_file = await db.get(ChapterFile, chapter.url)
     options = await db.get(MangaOutput, str(chat_id))
@@ -498,7 +498,7 @@ async def favourite_click(client: Client, callback: CallbackQuery):
     action, data = callback.data.split('_')
     fav = action == 'fav'
     manga = favourites[callback.data]
-    db = DB()
+    db = DB(mongo_url)
     subs = await db.get(Subscription, (manga.url, str(callback.from_user.id)))
     if not subs and fav:
         await db.add(Subscription(url=manga.url, user_id=str(callback.from_user.id)))
@@ -567,7 +567,7 @@ async def on_callback_query(client, callback: CallbackQuery):
 
 
 async def remove_subscriptions(sub: str):
-    db = DB()
+    db = DB(mongo_url)
 
     await db.erase_subs(sub)
 
