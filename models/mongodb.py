@@ -9,41 +9,47 @@ T = TypeVar("T")
 class ChapterFile:
     def __init__(self, url: str, file_id: Optional[str] = None, file_unique_id: Optional[str] = None,
                  cbz_id: Optional[str] = None, cbz_unique_id: Optional[str] = None,
-                 telegraph_url: Optional[str] = None):
+                 telegraph_url: Optional[str] = None, _id=None):
         self.url = url
         self.file_id = file_id
         self.file_unique_id = file_unique_id
         self.cbz_id = cbz_id
         self.cbz_unique_id = cbz_unique_id
         self.telegraph_url = telegraph_url
+        self._id = _id
 
 class MangaOutput:
-    def __init__(self, user_id: str, output: int, _id: Optional[str] = None):
+    def __init__(self, user_id: str, output: int, _id=None):
         self.user_id = user_id
         self.output = output
+        self._id = _id
 
 class Subscription:
     def __init__(self, url: str, user_id: str, custom_caption: Optional[str] = None,
-                 custom_filename: Optional[str] = None):
+                 custom_filename: Optional[str] = None, _id=None):
         self.url = url
         self.user_id = user_id
         self.custom_caption = custom_caption
         self.custom_filename = custom_filename
+        self._id = _id
 
 class LastChapter:
-    def __init__(self, url: str, chapter_url: str):
+    def __init__(self, url: str, chapter_url: str, _id=None):
         self.url = url
         self.chapter_url = chapter_url
+        self._id = _id
 
 class MangaName:
-    def __init__(self, url: str, name: str):
+    def __init__(self, url: str, name: str, _id=None):
         self.url = url
         self.name = name
+        self._id = _id
 
 class MangaPicture:
-    def __init__(self, manga_url: str, url: str):
+    def __init__(self, manga_url: str, url: str, _id=None):
         self.manga_url = manga_url
         self.url = url
+        self._id = _id
 
 class DB:
     def __init__(self, mongo_url: str):
@@ -63,9 +69,7 @@ class DB:
         if isinstance(other, ChapterFile):
             await self.chapter_files.insert_one(other.__dict__)
         elif isinstance(other, MangaOutput):
-            document = other.__dict__
-            document.pop('_id', None)  # Remove the _id field if present
-            await self.manga_outputs.insert_one(document)
+            await self.manga_outputs.insert_one(other.__dict__)
         elif isinstance(other, Subscription):
             await self.subscriptions.insert_one(other.__dict__)
         elif isinstance(other, LastChapter):
@@ -133,7 +137,7 @@ class DB:
             filter_regex = "|".join([f".*{f}.*" for f in filters])
             query.update({"$or": [{"name": {"$regex": filter_regex, "$options": "i"}}, {"url": {"$regex": filter_regex, "$options": "i"}}]})
         return [MangaName(**result) for result in await self.manga_names.find(query).to_list(None)]
-        
+
     async def get_subs_by_url(self, url: str):
         return [MangaName(**result) for result in await self.manga_names.find({"url": url}).to_list(None)]
 
