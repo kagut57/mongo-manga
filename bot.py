@@ -394,6 +394,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     db = DB(mongo_url)
 
     chapter_file = await db.get(ChapterFile, chapter.url) 
+    print(f"{chapter_file}")
     options = await db.get(MangaOutput, str(chat_id))
     options = options.output if options else (1 << 30) - 1
 
