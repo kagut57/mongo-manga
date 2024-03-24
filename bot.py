@@ -691,7 +691,7 @@ async def update_mangas():
         try:
             if url not in manga_dict:
                 continue
-            manga_name = manga_dict.get(_id, {}).get("name")
+            manga_name = manga_dict.get(url, {}).get("name")
             if url not in chapters_dictionary:
                 agen = client.iter_chapters(url, manga_name)
                 last_chapter = await anext(agen)
