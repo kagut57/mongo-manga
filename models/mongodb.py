@@ -4,7 +4,7 @@ from typing import Type, List, TypeVar, Optional
 
 T = TypeVar("T")
 
-async def connect_mongodb(db_url: str = "mongodb://localhost:27017", db_name: str = "test") -> AsyncIOMotorDatabase:
+async def mongodb(db_url: str = "mongodb://localhost:27017", db_name: str = "test") -> AsyncIOMotorDatabase:
     client = AsyncIOMotorClient(db_url)
     db = client[db_name]
     return db
