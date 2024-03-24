@@ -36,7 +36,7 @@ async def get_chapter_file_by_id(db: AsyncIOMotorDatabase, id: str) -> Optional[
         }
     )
 
-async def get_subs(db: AsyncIOMotorDatabase, user_id: str, filters=None) -> List[dict]:
+async def get_subs(db: AsyncIOMotorDatabase, user_id: str, filters: List[str] = None) -> List[dict]:
     filters = filters or []
     pipeline = [
         {"$match": {"user_id": user_id}},
@@ -49,18 +49,17 @@ async def get_subs(db: AsyncIOMotorDatabase, user_id: str, filters=None) -> List
             }
         },
         {"$unwind": "$manga_name"},
-        {
-            "$match": {
-                "$or": [
-                    {"manga_name.name": {"$regex": filter_, "$options": "i"}}
-                    for filter_ in filters
-                ]
-            }
-        },
-        {"$project": {"_id": 0, "manga_name": 1}},
     ]
+    # Add $match stage for each filter
+    for filter_ in filters:
+        pipeline.append({
+            "$match": {
+                "manga_name.name": {"$regex": filter_, "$options": "i"}
+            }
+        })
+
     cursor = db["subscriptions"].aggregate(pipeline)
-    return [doc["manga_name"] async for doc in cursor]
+    return [doc async for doc in cursor]
 
 async def get_subs_by_url(db: AsyncIOMotorDatabase, url: str) -> List[dict]:
     pipeline = [
