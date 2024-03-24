@@ -12,3 +12,4 @@ alembic
 loguru
 pymongo
 motor
+Uvloop
