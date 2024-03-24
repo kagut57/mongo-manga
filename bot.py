@@ -626,7 +626,7 @@ async def update_mangas():
         chapters_dictionary[last_chapter.url] = last_chapter
 
     for manga in manga_names:
-        manga_dict[manga.url] = manga
+        manga_dict[url]['name'] = manga
 
     for url in subs_dictionary:
         for ident, client in plugins.items():
