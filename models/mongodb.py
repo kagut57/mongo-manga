@@ -1,12 +1,12 @@
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
 from typing import Type, List, TypeVar, Optional
-from config import mongourl
+from config import mongo_url
 
 T = TypeVar("T")
 
 async def mongodb() -> AsyncIOMotorDatabase:
-    db_url = mongourl
+    db_url = mongo_url
     db_name = "mangabot"
     client = AsyncIOMotorClient(db_url, 27017)
     db = client[db_name]
