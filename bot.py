@@ -400,7 +400,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     db = await mongodb()
     chapter_file = await get(db, "chapter_files", chapter.url)
     print(f"{chapter_file}")
-    options = await get(db, "manga_output", str(message_from.user.id))
+    options = await get(db, "manga_output", str(message.from_user.id))
     options = options.output if options else (1 << 30) - 1
 
     error_caption = '\n'.join([
