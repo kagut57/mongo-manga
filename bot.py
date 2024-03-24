@@ -123,7 +123,7 @@ bot = Client('bot',
 pdf_queue = AQueue()
 
 db = await mongodb()
-LastChapter = await db.get_all("last_chapters")
+LastChapter = await get_all(db, "last_chapters")
 
 
 @bot.on_message(filters=~(filters.private & filters.incoming))
