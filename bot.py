@@ -431,10 +431,9 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                                              f', please check the chapter at the web\n\n{error_caption}')
         thumb_path = fld2thumb(pictures_folder)
 
-    if download and not chapter_file.telegraph_url:
-        chapter_file.telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
-
     if options & OutputOptions.Telegraph:
+        if not chapter_file.telegraph_url:
+            chapter_file.telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
         success_caption += f'[Read on telegraph]({chapter_file.telegraph_url})\n'
     success_caption += f'[Read on website]({chapter.get_url()})'
 
