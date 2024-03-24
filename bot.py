@@ -632,6 +632,9 @@ async def update_mangas():
     subscriptions = await get_all(db, "subscription")
     last_chapters = await get_all(db, "last_chapters")
     manga_names = await get_all(db, "manga_names")
+    print(f"subs:{subscriptions}")
+    print(f"lc:{last_chapters}")
+    print(f"names:{manga_names}")
 
     subs_dictionary = dict()
     chapters_dictionary = dict()
@@ -640,15 +643,15 @@ async def update_mangas():
     manga_dict = dict()
 
     for subscription in subscriptions:
-        if subscription.get("url") not in subs_dictionary:
-            subs_dictionary[subscription.get("ur")] = []
-        subs_dictionary[subscription.get("url")].append(subscription.get("user_id"))
+        if subscription.get(url) not in subs_dictionary:
+            subs_dictionary[subscription.get(url)] = []
+        subs_dictionary[subscription.get(url)].append(subscription.get(user_id))
 
     for last_chapter in last_chapters:
-        chapters_dictionary[last_chapter.get("url")] = last_chapter
+        chapters_dictionary[last_chapter.get(url)] = last_chapter
 
     for manga in manga_names:
-        manga_dict[manga.get("url")] = manga
+        manga_dict[manga.get(url)] = manga
 
     for url in subs_dictionary:
         for ident, client in plugins.items():
