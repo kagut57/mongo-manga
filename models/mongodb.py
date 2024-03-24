@@ -15,8 +15,8 @@ async def mongodb() -> AsyncIOMotorDatabase:
 async def add(db: AsyncIOMotorDatabase, collection_name: str, data: dict):
     await db[collection_name].update_one({"_id": data["_id"]}, {"$set": data}, upsert=True)
 
-async def get(db: AsyncIOMotorDatabase, collection_name: str, id):
-    return await db[collection_name].find_one({"_id": id})
+async def get(db: AsyncIOMotorDatabase, collection_name: str, query: dict):
+    return await db[collection_name].find_one(query)
 
 async def get_all(db: AsyncIOMotorDatabase, collection_name: str) -> List[dict]:
     cursor = db[collection_name].find()
