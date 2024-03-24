@@ -31,7 +31,7 @@ from tools.flood import retry_on_flood
 from collections import namedtuple
 
 LastChapter = namedtuple('LastChapter', ['url', 'chapter_url'])
-ChapterFile = namedtuple('ChapterFile', ['_id', 'file_id', 'file_unique_id', 'cbz_id', 'cbz_unique_id', 'telegraph_url'])
+ChapterFile = namedtuple('ChapterFile', ['id', 'file_id', 'file_unique_id', 'cbz_id', 'cbz_unique_id', 'telegraph_url'])
 
 
 mangas: Dict[str, MangaCard] = dict()
@@ -406,12 +406,12 @@ async def chapter_click(client, data, chat_id):
     logger.debug(f"Put chapter {chapters[data].name} to queue for user {chat_id} - queue size: {pdf_queue.qsize()}")
 
 
-async def send_manga_chapter(client: TelegramClient, chapter, chat_id):
+async def send_manga_chapter(client: Client, chapter, chat_id):
     db = await mongodb()
     
     # Retrieve chapter file and user options from the database
     chapter_file = await get(db, "chapter_files", chapter.url)
-    if isinstance(chapter_file, dict):  
+    if isinstance(chapter_file, dict):
         chapter_file = ChapterFile(**chapter_file)
 
     print(f"{chapter_file}")
@@ -477,10 +477,10 @@ async def send_manga_chapter(client: TelegramClient, chapter, chat_id):
                 media_docs.append(InputMediaDocument(cbz, thumb=thumb_path))
 
     if len(media_docs) == 0:
-        messages: List[Message] = await retry_on_flood(client.send_message)(chat_id, success_caption)
+        messages: list[Message] = await retry_on_flood(client.send_message)(chat_id, success_caption)
     else:
         media_docs[-1].caption = success_caption
-        messages: List[Message] = await retry_on_flood(client.send_media_group)(chat_id, media_docs)
+        messages: list[Message] = await retry_on_flood(client.send_media_group)(chat_id, media_docs)
 
     # Save file ids
     if download and media_docs:
