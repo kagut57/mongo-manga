@@ -198,21 +198,18 @@ async def on_refresh(client: Client, message: Message):
     if not (message.reply_to_message and message.reply_to_message.outgoing and
             ((document and document.file_name[-4:].lower() in ['.pdf', '.cbz']) or match)):
         return await message.reply("This command only works when it replies to a manga file that bot sent to you")
-    db = DB(mongo_url)
     if document:
         chapter = await db.get_chapter_file_by_id(document.file_unique_id)
     else:
         chapter = await db.get_chapter_file_by_id(match.group(1))
     if not chapter:
         return await message.reply("This file was already refreshed")
-    await db.erase(chapter)
+    await delete(db, "chapter_files", chapter)
     return await message.reply("File refreshed successfully!")
 
 
 @bot.on_message(filters=filters.command(['subs']))
 async def on_subs(client: Client, message: Message):
-    db = DB(mongo_url)
-
     filter_string = message.text.split(maxsplit=1)[1] if message.text.split(maxsplit=1)[1:] else ''
     filter_list = [filter_.strip() for filter_ in filter_string.split(' ') if filter_.strip()]
 
@@ -241,7 +238,7 @@ async def on_cancel_command(client: Client, message: Message):
     sub = await get(db, "subscriptions", query) 
     if not sub:
         return await message.reply("You were not subscribed to that manga.")
-    await delete(db, "subscriptions", sub["_id"])
+    await delete(db, "subscriptions", sub)
     return await message.reply("You will no longer receive updates for that manga.")
 
 @bot.on_message(filters=filters.command(['options']))
@@ -268,15 +265,20 @@ async def on_message(client, message: Message):
     ))
 
 
+output_dict = {
+    "_id": user_id,
+    "output": output_value
+}
+
 async def options_click(client, callback: CallbackQuery):
-    db = DB(mongo_url)
-    user_options = await db.get(MangaOutput, str(callback.from_user.id))
+    user_id = str(callback.from_user.id)
+    user_options = await get(db, "manga_output", user_id)
     if not user_options:
-        user_options = MangaOutput(user_id=str(callback.from_user.id), output=(2 << 30) - 1)
+        user_options = output_dict.copy()
     option = int(callback.data.split('_')[-1])
-    user_options.output ^= option
-    buttons = get_buttons_for_options(user_options.output)
-    await db.add(user_options)
+    user_options["output"] ^= option
+    buttons = get_buttons_for_options(user_options["output"])
+    await add(db, "manga_output", user_options)
     return await callback.message.edit_reply_markup(reply_markup=buttons)
 
 
@@ -331,9 +333,9 @@ async def manga_click(client, callback: CallbackQuery, pagination: Pagination = 
     for result in results:
         chapters[result.unique()] = result
         full_pages[full_page_key].append(result.unique())
-
-    db = DB(mongo_url)
-    subs = await db.get(Subscription, (pagination.manga.url, str(callback.from_user.id)))
+        
+    query = {"url": pagination.manga.url, "user_id": str(callback.from_user.id)}
+    sub = await get(db, "subscriptions", query)
 
     prev = [InlineKeyboardButton('<<', f'{pagination.id}_{pagination.page - 1}')]
     next_ = [InlineKeyboardButton('>>', f'{pagination.id}_{pagination.page + 1}')]
@@ -391,11 +393,10 @@ async def chapter_click(client, data, chat_id):
 
 
 async def send_manga_chapter(client: Client, chapter, chat_id):
-    db = DB(mongo_url)
-
-    chapter_file = await db.get(ChapterFile, chapter.url) 
+    
+    chapter_file = await get(db, "chapter_files", chapter.url)
     print(f"{chapter_file}")
-    options = await db.get(MangaOutput, str(chat_id))
+    options = await get(db, "manga_output", str(message_from.user.id))
     options = options.output if options else (1 << 30) - 1
 
     error_caption = '\n'.join([
@@ -419,7 +420,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                                           f', please check the chapter at the web\n\n{error_caption}')
         thumb_path = fld2thumb(pictures_folder)
 
-    chapter_file = chapter_file or ChapterFile(url=chapter.url)
+    chapter_file = chapter_file or chapter_file("_id":chapter.url)
 
     if download and not chapter_file.telegraph_url:
         chapter_file.telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
@@ -473,11 +474,20 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
             elif message.document.file_name.endswith('.cbz'):
                 chapter_file.cbz_id = message.document.file_id
                 chapter_file.cbz_unique_id = message.document.file_unique_id
+                
+    chapter_file_dict = {
+        "_id": chapter.url,
+        "file_id": chapter_file.file_id if chapter_file and chapter_file.file_id else None,
+        "file_unique_id": chapter_file.file_unique_id if chapter_file else None,
+        "cbz_id": chapter_file.cbz_id if chapter_file and chapter_file.cbz_id else None,
+        "cbz_unique_id": chapter_file.cbz_unique_id if chapter_file else None,
+        "telegraph_url": chapter_file.telegraph_url if chapter_file else None
+    }
 
     if download:
         shutil.rmtree(pictures_folder, ignore_errors=True)
         print(f"{chapter_file}")
-        await db.add(chapter_file)
+        await  add(db, "chapter_file", chapter_file_dict)
 
 
 async def pagination_click(client: Client, callback: CallbackQuery):
@@ -500,16 +510,27 @@ async def favourite_click(client: Client, callback: CallbackQuery):
     action, data = callback.data.split('_')
     fav = action == 'fav'
     manga = favourites[callback.data]
-    db = DB(mongo_url)
-    subs = await db.get(Subscription, (manga.url, str(callback.from_user.id)))
+    
+    sub_dict = {
+        "url": manga.url,
+        "user_id": str(callback.from_user.id),
+        "custom_caption": None,
+        "custom_filename": None
+    }
+    
+    manga_name_dict = {
+        "url": manga.url,
+        "name": manga.name
+    }
+
+    subs = await get(db, "subscriptions", {"url": manga.url, "user_id": str(callback.from_user.id)})
+    
     if not subs and fav:
-        await db.add(Subscription(url=manga.url, user_id=str(callback.from_user.id)))
+        await add(db, "subscriptions", sub_dict)
+        
     if subs and not fav:
-        await db.erase(subs)
-    if subs and fav:
-        await callback.answer("You are already subscribed", show_alert=True)
-    if not subs and not fav:
-        await callback.answer("You are not subscribed", show_alert=True)
+        await delete(db, "subscriptions", subs["_id"])
+        
     reply_markup = callback.message.reply_markup
     keyboard = reply_markup.inline_keyboard
     keyboard[0] = [InlineKeyboardButton(
@@ -518,10 +539,10 @@ async def favourite_click(client: Client, callback: CallbackQuery):
     )]
     await bot.edit_message_reply_markup(callback.from_user.id, callback.message.id,
                                         InlineKeyboardMarkup(keyboard))
-    db_manga = await db.get(MangaName, manga.url)
+    
+    db_manga = await get(db, "manga_names", manga.url)
     if not db_manga:
-        await db.add(MangaName(url=manga.url, name=manga.name))
-
+        await add(db, "manga_names", manga_name_dict)
 
 def is_pagination_data(callback: CallbackQuery):
     data = callback.data
@@ -569,17 +590,14 @@ async def on_callback_query(client, callback: CallbackQuery):
 
 
 async def remove_subscriptions(sub: str):
-    db = DB(mongo_url)
-
     await db.erase_subs(sub)
 
 
 async def update_mangas():
     logger.debug("Updating mangas")
-    db = DB(mongo_url)
-    subscriptions = await db.get_all(Subscription)
-    last_chapters = await db.get_all(LastChapter)
-    manga_names = await db.get_all(MangaName)
+    subscriptions = await get_all(db, "subscription")
+    last_chapters = await get_all(db, "last_chapters")
+    manga_names = await get_all(db, "manga_names")
 
     subs_dictionary = dict()
     chapters_dictionary = dict()
@@ -635,7 +653,11 @@ async def update_mangas():
             if url not in chapters_dictionary:
                 agen = client.iter_chapters(url, manga_name)
                 last_chapter = await anext(agen)
-                await db.add(LastChapter(url=url, chapter_url=last_chapter.url))
+                last_chapter_dict = {
+                    "url": url,
+                    "chapter_url": last_chapter.url
+                }
+                await add(db, "last_chapters", last_chapter_dict)
                 await asyncio.sleep(10)
             else:
                 last_chapter = chapters_dictionary[url]
@@ -650,7 +672,11 @@ async def update_mangas():
                         break
                 if new_chapters:
                     last_chapter.chapter_url = new_chapters[0].url
-                    await db.add(last_chapter)
+                    last_chapter_dict = {
+                        "url": url,
+                        "chapter_url": new_chapters[0].url
+                    }
+                    await add(db, "last_chapters", last_chapter_dict)
                     updated[url] = list(reversed(new_chapters))
                     for chapter in new_chapters:
                         if chapter.unique() not in chapters:
