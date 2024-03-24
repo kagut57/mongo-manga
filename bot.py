@@ -406,11 +406,14 @@ async def chapter_click(client, data, chat_id):
     logger.debug(f"Put chapter {chapters[data].name} to queue for user {chat_id} - queue size: {pdf_queue.qsize()}")
 
 
-async def send_manga_chapter(client: Client, chapter, chat_id):
+async def send_manga_chapter(client: TelegramClient, chapter, chat_id):
     db = await mongodb()
     
     # Retrieve chapter file and user options from the database
     chapter_file = await get(db, "chapter_files", chapter.url)
+    if isinstance(chapter_file, dict):  
+        chapter_file = ChapterFile(**chapter_file)
+
     print(f"{chapter_file}")
     options = await get(db, "manga_output", str(chat_id))
     options = options.get("output", (1 << 30) - 1) if options else (1 << 30) - 1
@@ -423,9 +426,9 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     success_caption = f'{chapter.manga.name} - {chapter.name}\n'
 
     download = not chapter_file
-    download = download or options & OutputOptions.PDF and not chapter_file.file_id
-    download = download or options & OutputOptions.CBZ and not chapter_file.cbz_id
-    download = download or options & OutputOptions.Telegraph and not chapter_file.telegraph_url
+    download = download or options & OutputOptions.PDF and not (chapter_file and chapter_file.file_id)
+    download = download or options & OutputOptions.CBZ and not (chapter_file and chapter_file.cbz_id)
+    download = download or options & OutputOptions.Telegraph and not (chapter_file and chapter_file.telegraph_url)
     download = download and options & ((1 << len(OutputOptions)) - 1) != 0
 
     if download:
@@ -436,10 +439,8 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                                              f', please check the chapter at the web\n\n{error_caption}')
         thumb_path = fld2thumb(pictures_folder)
 
-    chapter_file = chapter_file
-
     if options & OutputOptions.Telegraph:
-        if chapter_file.telegraph_url==None:
+        if not (chapter_file and chapter_file.telegraph_url):
             chapter_file.telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
         success_caption += f'[Read on telegraph]({chapter_file.telegraph_url})\n'
     success_caption += f'[Read on website]({chapter.get_url()})'
@@ -476,34 +477,40 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                 media_docs.append(InputMediaDocument(cbz, thumb=thumb_path))
 
     if len(media_docs) == 0:
-        messages: list[Message] = await retry_on_flood(client.send_message)(chat_id, success_caption)
+        messages: List[Message] = await retry_on_flood(client.send_message)(chat_id, success_caption)
     else:
         media_docs[-1].caption = success_caption
-        messages: list[Message] = await retry_on_flood(client.send_media_group)(chat_id, media_docs)
+        messages: List[Message] = await retry_on_flood(client.send_media_group)(chat_id, media_docs)
 
     # Save file ids
     if download and media_docs:
         for message in [x for x in messages if x.document]:
             if message.document.file_name.endswith('.pdf'):
-                chapter_file.file_id = message.document.file_id
-                chapter_file.file_unique_id = message.document.file_unique_id
+                if isinstance(chapter_file, dict):
+                    chapter_file['file_id'] = message.document.file_id
+                else:
+                    chapter_file.file_id = message.document.file_id
+                    chapter_file.file_unique_id = message.document.file_unique_id
             elif message.document.file_name.endswith('.cbz'):
-                chapter_file.cbz_id = message.document.file_id
-                chapter_file.cbz_unique_id = message.document.file_unique_id
-                
+                if isinstance(chapter_file, dict):
+                    chapter_file['cbz_id'] = message.document.file_id
+                else:
+                    chapter_file.cbz_id = message.document.file_id
+                    chapter_file.cbz_unique_id = message.document.file_unique_id
+
     chapter_file_dict = {
         "_id": chapter.url,
-        "file_id": chapter_file.file_id if chapter_file and chapter_file.file_id else None,
-        "file_unique_id": chapter_file.file_unique_id if chapter_file else None,
-        "cbz_id": chapter_file.cbz_id if chapter_file and chapter_file.cbz_id else None,
-        "cbz_unique_id": chapter_file.cbz_unique_id if chapter_file else None,
-        "telegraph_url": chapter_file.telegraph_url if chapter_file else None
+        "file_id": chapter_file.get('file_id') if isinstance(chapter_file, dict) else chapter_file.file_id,
+        "file_unique_id": chapter_file.get('file_unique_id') if isinstance(chapter_file, dict) else chapter_file.file_unique_id,
+        "cbz_id": chapter_file.get('cbz_id') if isinstance(chapter_file, dict) else chapter_file.cbz_id,
+        "cbz_unique_id": chapter_file.get('cbz_unique_id') if isinstance(chapter_file, dict) else chapter_file.cbz_unique_id,
+        "telegraph_url": chapter_file.get('telegraph_url') if isinstance(chapter_file, dict) else (chapter_file.telegraph_url if chapter_file else None)
     }
 
     if download:
         shutil.rmtree(pictures_folder, ignore_errors=True)
         print(f"{chapter_file}")
-        await  add(db, "chapter_file", chapter_file_dict)
+        await add(db, "chapter_file", chapter_file_dict)
 
 
 async def pagination_click(client: Client, callback: CallbackQuery):
