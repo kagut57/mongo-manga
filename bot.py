@@ -285,7 +285,7 @@ async def on_cancel_command(client: Client, message: Message):
     sub = await get(db, "subscriptions", query) 
     if not sub:
         return await message.reply("You were not subscribed to that manga.")
-    await delete(db, "subscriptions", sub)
+    await delete(db, "subscriptions", sub["_id"])  # Pass the _id field for deletion
     return await message.reply("You will no longer receive updates for that manga.")
 
 @bot.on_message(filters=filters.regex(r'^/'))
