@@ -411,7 +411,8 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     
     # Retrieve chapter file and user options from the database
     chapter_file = await get(db, "chapter_files", chapter.url)
-    if isinstance(chapter_file, dict):
+    if isinstance(chapter_file, dict):  # Check if chapter_file is a dictionary
+        # Convert the dictionary to a ChapterFile named tuple
         chapter_file = ChapterFile(**chapter_file)
 
     print(f"{chapter_file}")
@@ -440,9 +441,14 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
         thumb_path = fld2thumb(pictures_folder)
 
     if options & OutputOptions.Telegraph:
-        if not (chapter_file and chapter_file.telegraph_url):
-            chapter_file.telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
-        success_caption += f'[Read on telegraph]({chapter_file.telegraph_url})\n'
+        if chapter_file and chapter_file.telegraph_url:
+            success_caption += f'[Read on telegraph]({chapter_file.telegraph_url})\n'
+        else:
+            telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
+            success_caption += f'[Read on telegraph]({telegraph_url})\n'
+            if chapter_file:
+                chapter_file = chapter_file._replace(telegraph_url=telegraph_url)
+
     success_caption += f'[Read on website]({chapter.get_url()})'
 
     ch_name = clean(f'{clean(chapter.manga.name, 25)} - {chapter.name}', 45)
