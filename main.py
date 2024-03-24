@@ -3,11 +3,10 @@ import os
 from logger import logger
 from bot import bot, manga_updater, chapter_creation
 from models import mongodb
-from config import mongo_url
 
 async def async_main():
     try:
-        db = mongodb(mongo_url, mangabot)
+        db = mongodb()
         await db.connect()
     except Exception as e:
         logger.error(f"Error connecting to the database: {e}")
