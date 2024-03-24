@@ -545,7 +545,7 @@ async def favourite_click(client: Client, callback: CallbackQuery):
     }
     
     manga_name_dict = {
-        "_id": manga.url,
+        "url": manga.url,
         "name": manga.name
     }
 
@@ -641,7 +641,7 @@ async def update_chapters_dictionary(last_chapters):
     return {lc.get("url"): lc for lc in last_chapters if "url" in lc}
 
 async def update_manga_dict(manga_names):
-    return {manga["_id"]: manga for manga in manga_names if "_id" in manga}
+    return {manga["url"]: manga for manga in manga_names if "url" in manga}
 
 async def update_mangas():
     db = await mongodb()
