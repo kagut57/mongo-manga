@@ -124,7 +124,7 @@ def get_buttons_for_options(user_options: int):
 @bot.on_message(filters=filters.command(['options']))
 async def on_options_command(client: Client, message: Message):
     db = await mongodb()
-    user_options = await get(db, "manga_output", str(message_from.user.id))
+    user_options = await get(db, "manga_output", str(message.from_user.id))
     user_options = user_options.output if user_options else (1 << 30) - 1
     buttons = get_buttons_for_options(user_options)
     return await message.reply("Select the desired output format.", reply_markup=buttons)
