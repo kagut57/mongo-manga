@@ -517,7 +517,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                             chapter_file.file_id = message.document.file_id
                             chapter_file.file_unique_id = message.document.file_unique_id
                     else:
-                        chapter_file = ChapterFile(_id=chapter.url, file_id=message.document.file_id, file_unique_id=message.document.file_unique_id, cbz_id=None, cbz_unique_id=None, telegraph_url=None)
+                        chapter_file = ChapterFile(id=chapter.url, file_id=message.document.file_id, file_unique_id=message.document.file_unique_id, cbz_id=None, cbz_unique_id=None, telegraph_url=None)
                 elif message.document.file_name.endswith('.cbz'):
                     if chapter_file:
                         if isinstance(chapter_file, dict):
@@ -526,7 +526,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                             chapter_file.cbz_id = message.document.file_id
                             chapter_file.cbz_unique_id = message.document.file_unique_id
                     else:
-                        chapter_file = ChapterFile(_id=chapter.url, file_id=None, file_unique_id=None, cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id, telegraph_url=None)
+                        chapter_file = ChapterFile(id=chapter.url, file_id=None, file_unique_id=None, cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id, telegraph_url=None)
 
     chapter_file_dict = {
         "_id": chapter.url,
