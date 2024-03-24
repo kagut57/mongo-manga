@@ -1,9 +1,7 @@
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
-from typing import Type, List, TypeVar, Optional
+from typing import Type, List
 from config import mongo_url
-
-T = TypeVar("T")
 
 async def mongodb() -> AsyncIOMotorDatabase:
     db_url = mongo_url
