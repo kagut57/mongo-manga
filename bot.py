@@ -28,10 +28,6 @@ from pagination import Pagination
 from plugins.client import clean
 from tools.aqueue import AQueue
 from tools.flood import retry_on_flood
-from collections import namedtuple
-
-LastChapter = namedtuple('LastChapter', ['url', 'chapter_url'])
-ChapterFile = namedtuple('ChapterFile', ['id', 'file_id', 'file_unique_id', 'cbz_id', 'cbz_unique_id', 'telegraph_url'])
 
 
 mangas: Dict[str, MangaCard] = dict()
