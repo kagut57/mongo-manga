@@ -463,7 +463,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                 pdf = await asyncio.get_running_loop().run_in_executor(None, fld2pdf, pictures_folder, ch_name)
                 media_docs.append(InputMediaDocument(pdf, thumb=thumb_path))
                 if not chapter_file:
-                    chapter_file = ChapterFile(_id=chapter.url, file_id=message.document.file_id, file_unique_id=message.document.file_unique_id, cbz_id=None, cbz_unique_id=None, telegraph_url=None)
+                    chapter_file = ChapterFile(id=chapter.url, file_id=message.document.file_id, file_unique_id=message.document.file_unique_id, cbz_id=None, cbz_unique_id=None, telegraph_url=None)
                 else:
                     chapter_file = chapter_file._replace(file_id=message.document.file_id, file_unique_id=message.document.file_unique_id)
             except Exception as e:
@@ -480,7 +480,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                 cbz = await asyncio.get_running_loop().run_in_executor(None, fld2cbz, pictures_folder, ch_name)
                 media_docs.append(InputMediaDocument(cbz, thumb=thumb_path))
                 if not chapter_file:
-                    chapter_file = ChapterFile(_id=chapter.url, file_id=None, file_unique_id=None, cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id, telegraph_url=None)
+                    chapter_file = ChapterFile(id=chapter.url, file_id=None, file_unique_id=None, cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id, telegraph_url=None)
                 else:
                     chapter_file = chapter_file._replace(cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id)
             except Exception as e:
