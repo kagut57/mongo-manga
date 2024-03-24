@@ -136,17 +136,19 @@ async def options_click(client, callback: CallbackQuery):
     
     user_options = await get(db, "manga_output", user_id)
     
-    if not user_options:
+    if user_options is None:
         user_options = {
             "_id": user_id,
             "output": (1 << 30) - 1
         }
+    else:
+        user_options = user_options.get("output", (1 << 30) - 1)
     
-    user_options["output"] ^= option
+    user_options ^= option
     
-    await add(db, "manga_output", user_options)
+    await add(db, "manga_output", {"_id": user_id, "output": user_options})
     
-    buttons = get_buttons_for_options(user_options["output"])
+    buttons = get_buttons_for_options(user_options)
     
     await callback.message.edit_reply_markup(reply_markup=buttons)
 
