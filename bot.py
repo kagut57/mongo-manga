@@ -433,9 +433,11 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     error_caption = f"{chapter.manga.name} - {chapter.name}\n{chapter.get_url()}"
     success_caption = f"{chapter.manga.name} - {chapter.name}\n[Read on website]({chapter.get_url()})"
 
-    download = not chapter_file or any(
-        options & flag and not locals()[f"{flag.name.lower()}_id"] for flag in OutputOptions
-    )
+    download = not chapter_file
+    download = download or options & OutputOptions.PDF and not file_id
+    download = download or options & OutputOptions.CBZ and not cbz_id
+    download = download or options & OutputOptions.Telegraph and not telegraph_url
+    download = download and options & ((1 << len(OutputOptions)) - 1) != 0
 
     if download:
         try:
