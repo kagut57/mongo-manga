@@ -105,6 +105,14 @@ def split_list(li):
     return [li[x: x + 2] for x in range(0, len(li), 2)]
 
 
+bot = Client('bot',
+             api_id=int(env_vars.get('API_ID')),
+             api_hash=env_vars.get('API_HASH'),
+             bot_token=env_vars.get('BOT_TOKEN'),
+             max_concurrent_transmissions=3)
+
+pdf_queue = AQueue()
+
 def get_buttons_for_options(user_options: int):
     buttons = []
     for option in OutputOptions:
@@ -113,14 +121,34 @@ def get_buttons_for_options(user_options: int):
         buttons.append([InlineKeyboardButton(text, f"options_{option.value}")])
     return InlineKeyboardMarkup(buttons)
 
+@bot.on_message(filters=filters.command(['options']))
+async def on_options_command(client: Client, message: Message):
+    db = await mongodb()
+    user_options = await get(db, "manga_output", str(message_from.user.id))
+    user_options = user_options.output if user_options else (1 << 30) - 1
+    buttons = get_buttons_for_options(user_options)
+    return await message.reply("Select the desired output format.", reply_markup=buttons)
 
-bot = Client('bot',
-             api_id=int(env_vars.get('API_ID')),
-             api_hash=env_vars.get('API_HASH'),
-             bot_token=env_vars.get('BOT_TOKEN'),
-             max_concurrent_transmissions=3)
-
-pdf_queue = AQueue()
+async def options_click(client, callback: CallbackQuery):
+    db = await mongodb()
+    user_id = str(callback.from_user.id)
+    option = int(callback.data.split('_')[-1])
+    
+    user_options = await get(db, "manga_output", user_id)
+    
+    if not user_options:
+        user_options = {
+            "_id": user_id,
+            "output": (1 << 30) - 1
+        }
+    
+    user_options["output"] ^= option
+    
+    await add(db, "manga_output", user_options)
+    
+    buttons = get_buttons_for_options(user_options["output"])
+    
+    await callback.message.edit_reply_markup(reply_markup=buttons)
 
 
 @bot.on_message(filters=~(filters.private & filters.incoming))
@@ -241,15 +269,6 @@ async def on_cancel_command(client: Client, message: Message):
     await delete(db, "subscriptions", sub)
     return await message.reply("You will no longer receive updates for that manga.")
 
-@bot.on_message(filters=filters.command(['options']))
-async def on_options_command(client: Client, message: Message):
-    db = await mongodb()
-    user_options = await get(db, "manga_output", str(message_from.user.id))
-    user_options = user_options.output if user_options else (1 << 30) - 1
-    buttons = get_buttons_for_options(user_options)
-    return await message.reply("Select the desired output format.", reply_markup=buttons)
-
-
 @bot.on_message(filters=filters.regex(r'^/'))
 async def on_unknown_command(client: Client, message: Message):
     await message.reply("Unknown command")
@@ -264,25 +283,6 @@ async def on_message(client, message: Message):
         split_list([InlineKeyboardButton(language, callback_data=f"lang_{language}_{hash(message.text)}")
                     for language in plugin_dicts.keys()])
     ))
-
-
-output_dict = {
-    "_id": user_id,
-    "output": output_value
-}
-
-async def options_click(client, callback: CallbackQuery):
-    db = await mongodb()
-    user_id = str(callback.from_user.id)
-    user_options = await get(db, "manga_output", user_id)
-    if not user_options:
-        user_options = output_dict.copy()
-    option = int(callback.data.split('_')[-1])
-    user_options["output"] ^= option
-    buttons = get_buttons_for_options(user_options["output"])
-    await add(db, "manga_output", user_options)
-    return await callback.message.edit_reply_markup(reply_markup=buttons)
-
 
 async def language_click(client, callback: CallbackQuery):
     lang, query = language_query[callback.data]
