@@ -697,7 +697,7 @@ async def update_mangas():
                 agen = client.iter_chapters(url, manga_name)
                 last_chapter = await anext(agen)
                 last_chapter_dict = {
-                    "_id": url,
+                    "url": url,
                     "chapter_url": last_chapter.url
                 }
                 await add(db, "last_chapters", last_chapter_dict)
