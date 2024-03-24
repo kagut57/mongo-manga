@@ -23,7 +23,7 @@ from pyrogram import Client, filters
 from typing import Dict, Tuple, List, TypedDict
 from loguru import logger
 
-from models.mongodb import DB, ChapterFile, Subscription, LastChapter, MangaName, MangaOutput
+from models.mongodb import mongodb
 from pagination import Pagination
 from plugins.client import clean
 from tools.aqueue import AQueue
@@ -121,9 +121,6 @@ bot = Client('bot',
              max_concurrent_transmissions=3)
 
 pdf_queue = AQueue()
-
-if mongo_url:
-    DB(mongo_url)
 
 
 @bot.on_message(filters=~(filters.private & filters.incoming))
