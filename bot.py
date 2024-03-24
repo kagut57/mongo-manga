@@ -400,10 +400,11 @@ async def chapter_click(client, data, chat_id):
 
 async def send_manga_chapter(client: Client, chapter, chat_id):
     db = await mongodb()
+    
+    # Retrieve chapter file and user options from the database
     chapter_file = await get(db, "chapter_files", chapter.url)
-    print(f"{chapter_file}")
-    options = await get(db, "manga_output", str(message.from_user.id))
-    options = options.output if options else (1 << 30) - 1
+    options = await get(db, "manga_output", str(chat_id))
+    options = options.get("output", (1 << 30) - 1) if options else (1 << 30) - 1
 
     error_caption = '\n'.join([
         f'{chapter.manga.name} - {chapter.name}',
@@ -422,11 +423,9 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
         pictures_folder = await chapter.client.download_pictures(chapter)
         if not chapter.pictures:
             return await client.send_message(chat_id,
-                                          f'There was an error parsing this chapter or chapter is missing' +
-                                          f', please check the chapter at the web\n\n{error_caption}')
+                                             f'There was an error parsing this chapter or chapter is missing' +
+                                             f', please check the chapter at the web\n\n{error_caption}')
         thumb_path = fld2thumb(pictures_folder)
-
-    chapter_file = chapter_file
 
     if download and not chapter_file.telegraph_url:
         chapter_file.telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
@@ -445,12 +444,26 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
         else:
             try:
                 pdf = await asyncio.get_running_loop().run_in_executor(None, fld2pdf, pictures_folder, ch_name)
+                media_docs.append(InputMediaDocument(pdf, thumb=thumb_path))
             except Exception as e:
                 logger.exception(f'Error creating pdf for {chapter.name} - {chapter.manga.name}\n{e}')
-                return await client.send_message(chat_id, f'There was an error making the pdf for this chapter. '
-                                                       f'Forward this message to the bot group to report the '
-                                                       f'error.\n\n{error_caption}')
-            media_docs.append(InputMediaDocument(pdf, thumb=thumb_path))
+                await client.send_message(chat_id, f'There was an error making the pdf for this chapter. '
+                                                    f'Forward this message to the bot group to report the '
+                                                    f'error.\n\n{error_caption}')
+
+    if options & OutputOptions.CBZ:
+        if chapter_file.cbz_id:
+            media_docs.append(InputMediaDocument(chapter_file.cbz_id))
+        else:
+            try:
+                cbz = await asyncio.get_running_loop().run_in_executor(None, fld2cbz, pictures_folder, ch_name)
+                media_docs.append(InputMediaDocument(cbz, thumb=thumb_path))
+            except Exception as e:
+                logger.exception(f'Error creating cbz for {chapter.name} - {chapter.manga.name}\n{e}')
+                await client.send_message(chat_id, f'There was an error making the cbz for this chapter. '
+                                                    f'Forward this message to the bot group to report the '
+                                                    f'error.\n\n{error_caption}')
+                media_docs.append(InputMediaDocument(pdf, thumb=thumb_path))
 
     if options & OutputOptions.CBZ:
         if chapter_file.cbz_id:
