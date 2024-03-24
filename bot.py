@@ -638,7 +638,7 @@ async def update_subs_dictionary(subscriptions):
     return subs_dictionary
 
 async def update_chapters_dictionary(last_chapters):
-    return {lc["url"]: lc for lc in last_chapters}
+    return {lc.get("url"): lc for lc in last_chapters if "url" in lc}
 
 async def update_manga_dict(manga_names):
     return {manga["url"]: manga for manga in manga_names}
