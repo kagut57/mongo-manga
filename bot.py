@@ -650,6 +650,7 @@ async def update_mangas():
     subscriptions = await fetch_subscriptions(db)
     last_chapters = await fetch_last_chapters(db)
     manga_names = await fetch_manga_names(db)
+    print(f"{last_chapters}")
 
     subs_dictionary = await update_subs_dictionary(subscriptions)
     chapters_dictionary = await update_chapters_dictionary(last_chapters)
