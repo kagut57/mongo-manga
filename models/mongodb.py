@@ -12,8 +12,12 @@ async def mongodb() -> AsyncIOMotorDatabase:
     db = client[db_name]
     return db
 
-async def add(db: AsyncIOMotorDatabase, collection_name: str, data: dict):
-    await db[collection_name].update_one({"_id": data["_id"]}, {"$set": data}, upsert=True)
+async def add(db, collection_name, data):
+    if "_id" not in data:
+        result = await db[collection_name].insert_one(data)
+    else:
+        result = await db[collection_name].update_one({"_id": data["_id"]}, {"$set": data}, upsert=True)
+    return result
 
 async def get(db: AsyncIOMotorDatabase, collection_name: str, query: dict):
     return await db[collection_name].find_one(query)
