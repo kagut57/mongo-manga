@@ -23,7 +23,7 @@ from pyrogram import Client, filters
 from typing import Dict, Tuple, List, TypedDict
 from loguru import logger
 
-from models.mongodb import mongodb
+from models.mongodb import mongodb, add, get, get_all, delete, erase_subs, get_subs, get_subs_by_url
 from pagination import Pagination
 from plugins.client import clean
 from tools.aqueue import AQueue
