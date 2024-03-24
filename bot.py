@@ -715,7 +715,7 @@ async def update_mangas():
                 if new_chapters:
                     last_chapter["chapter_url"] = new_chapters[0].url
                     last_chapter_dict = {
-                        "_id": url,
+                        "url": url,
                         "chapter_url": new_chapters[0].url
                     }
                     await add(db, "last_chapters", last_chapter_dict)
