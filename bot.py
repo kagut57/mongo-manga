@@ -417,9 +417,10 @@ async def chapter_click(client, data, chat_id):
 
 async def send_manga_chapter(client: Client, chapter, chat_id):
     db = await mongodb()
-    chapter_file = await get(db, "chapter_files", {"_id":chapter.url})
-    options = await db.get(MangaOutput, str(chat_id))
-    options = options.output if options else (1 << 30) - 1
+    chapter_file = await get(db, "chapter_files", {"_id": chapter.url})
+    print(f"chapter_file")
+    options = await get(db, "manga_output", str(chat_id))
+    options = options.get("output", (1 << 30) - 1) if options else (1 << 30) - 1
     if chapter_file:
         file_id = chapter_file.get("file_id")
         file_unique_id = chapter_file.get("file_unique_id")
