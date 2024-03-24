@@ -4,7 +4,9 @@ from typing import Type, List, TypeVar, Optional
 
 T = TypeVar("T")
 
-async def mongodb(db_url: str , db_name: str) -> AsyncIOMotorDatabase:
+async def mongodb() -> AsyncIOMotorDatabase:
+    db_url = mongourl
+    db_name = "mangabot"
     client = AsyncIOMotorClient(db_url, 27017)
     db = client[db_name]
     return db
