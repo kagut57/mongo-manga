@@ -431,8 +431,10 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                                              f', please check the chapter at the web\n\n{error_caption}')
         thumb_path = fld2thumb(pictures_folder)
 
+    chapter_file = chapter_file
+
     if options & OutputOptions.Telegraph:
-        if not chapter_file.telegraph_url:
+        if chapter_file.telegraph_url==None:
             chapter_file.telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
         success_caption += f'[Read on telegraph]({chapter_file.telegraph_url})\n'
     success_caption += f'[Read on website]({chapter.get_url()})'
@@ -626,7 +628,7 @@ async def update_mangas():
         chapters_dictionary[last_chapter.url] = last_chapter
 
     for manga in manga_names:
-        manga_dict[url]['name'] = manga
+        manga_dict[manga['url']] = manga
 
     for url in subs_dictionary:
         for ident, client in plugins.items():
@@ -661,7 +663,7 @@ async def update_mangas():
         try:
             if url not in manga_dict:
                 continue
-            manga_name = manga_dict[url].name
+            manga_name = manga_dict[url]['name']
             if url not in chapters_dictionary:
                 agen = client.iter_chapters(url, manga_name)
                 last_chapter = await anext(agen)
