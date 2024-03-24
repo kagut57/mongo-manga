@@ -122,6 +122,9 @@ bot = Client('bot',
 
 pdf_queue = AQueue()
 
+db = await mongodb()
+LastChapter = await db.get_all("last_chapters")
+
 
 @bot.on_message(filters=~(filters.private & filters.incoming))
 async def on_chat_or_channel_message(client: Client, message: Message):
