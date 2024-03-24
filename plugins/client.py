@@ -6,7 +6,7 @@ from typing import List, AsyncIterable
 from aiohttp import ClientSession
 from pathlib import Path
 
-from models import LastChapter
+from bot import LastChapter
 from tools import LanguageSingleton
 
 
