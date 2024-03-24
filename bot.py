@@ -339,7 +339,7 @@ async def manga_click(client, callback: CallbackQuery, pagination: Pagination = 
         full_pages[full_page_key].append(result.unique())
         
     query = {"url": pagination.manga.url, "user_id": str(callback.from_user.id)}
-    sub = await get(db, "subscriptions", query)
+    subs = await get(db, "subscriptions", query)
 
     prev = [InlineKeyboardButton('<<', f'{pagination.id}_{pagination.page - 1}')]
     next_ = [InlineKeyboardButton('>>', f'{pagination.id}_{pagination.page + 1}')]
