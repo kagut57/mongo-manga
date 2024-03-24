@@ -120,7 +120,8 @@ def get_buttons_for_options(user_options: int):
         text = f'{checked} {option.name}'
         buttons.append([InlineKeyboardButton(text, f"options_{option.value}")])
     return InlineKeyboardMarkup(buttons)
-
+    
+@bot.on_message(filters=filters.command(['options']))
 async def on_options_command(client: Client, message: Message):
     db = await mongodb()
     user_options = await get(db, "manga_output", str(message.from_user.id))
@@ -442,7 +443,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     media_docs = []
 
     if options & OutputOptions.PDF:
-        if chapter_file.file_id:
+        if chapter_file and chapter_file.file_id:
             media_docs.append(InputMediaDocument(chapter_file.file_id))
         else:
             try:
@@ -455,7 +456,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                                                     f'error.\n\n{error_caption}')
 
     if options & OutputOptions.CBZ:
-        if chapter_file.cbz_id:
+        if chapter_file and chapter_file.cbz_id:
             media_docs.append(InputMediaDocument(chapter_file.cbz_id))
         else:
             try:
