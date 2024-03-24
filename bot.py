@@ -417,10 +417,9 @@ async def chapter_click(client, data, chat_id):
 
 async def send_manga_chapter(client: Client, chapter, chat_id):
     db = await mongodb()
-    chapter_file = await get(db, "chapter_files", {"_id": chapter.url})
-    options = await get(db, "manga_output", str(chat_id))
-    options = options.get("output", (1 << 30) - 1) if options else (1 << 30) - 1
-    
+    chapter_file = await get(db, "chapter_files", {"_id":chapter.url})
+    options = await db.get(MangaOutput, str(chat_id))
+    options = options.output if options else (1 << 30) - 1
     if chapter_file:
         file_id = chapter_file.get("file_id")
         file_unique_id = chapter_file.get("file_unique_id")
@@ -430,8 +429,14 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     else:
         file_id = file_unique_id = cbz_id = cbz_unique_id = telegraph_url = None
 
-    error_caption = f"{chapter.manga.name} - {chapter.name}\n{chapter.get_url()}"
-    success_caption = f"{chapter.manga.name} - {chapter.name}\n[Read on website]({chapter.get_url()})"
+        
+
+    error_caption = '\n'.join([
+        f'{chapter.manga.name} - {chapter.name}',
+        f'{chapter.get_url()}'
+    ])
+
+    success_caption = f'{chapter.manga.name} - {chapter.name}\n'
 
     download = not chapter_file
     download = download or options & OutputOptions.PDF and not file_id
@@ -440,54 +445,79 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     download = download and options & ((1 << len(OutputOptions)) - 1) != 0
 
     if download:
-        try:
-            pictures_folder = await chapter.client.download_pictures(chapter)
-            if not chapter.pictures:
-                raise Exception("Error parsing chapter or chapter is missing")
-            thumb_path = fld2thumb(pictures_folder)
+        pictures_folder = await chapter.client.download_pictures(chapter)
+        if not chapter.pictures:
+            return await client.send_message(chat_id,
+                                          f'There was an error parsing this chapter or chapter is missing' +
+                                          f', please check the chapter at the web\n\n{error_caption}')
+        thumb_path = fld2thumb(pictures_folder)
 
-            if not telegraph_url:
-                telegraph_url = await img2tph(chapter, clean(f"{chapter.manga.name} {chapter.name}"))
+    if download and not telegraph_url:
+        telegraph_url = await img2tph(chapter, clean(f'{chapter.manga.name} {chapter.name}'))
 
-            if options & OutputOptions.PDF and not file_id:
-                pdf = await asyncio.get_running_loop().run_in_executor(None, fld2pdf, pictures_folder, clean(f"{chapter.manga.name} - {chapter.name}", 45))
-                media_docs = [InputMediaDocument(pdf, thumb=thumb_path)]
+    if options & OutputOptions.Telegraph:
+        success_caption += f'[Read on telegraph]({telegraph_url})\n'
+    success_caption += f'[Read on website]({chapter.get_url()})'
 
-            if options & OutputOptions.CBZ and not cbz_id:
-                cbz = await asyncio.get_running_loop().run_in_executor(None, fld2cbz, pictures_folder, clean(f"{chapter.manga.name} - {chapter.name}", 45))
-                media_docs = [InputMediaDocument(cbz, thumb=thumb_path)]
+    ch_name = clean(f'{clean(chapter.manga.name, 25)} - {chapter.name}', 45)
 
-            if telegraph_url:
-                success_caption += f"\n[Read on telegraph]({telegraph_url})"
-            
-            if media_docs:
-                media_docs[-1].caption = success_caption
-                messages = await retry_on_flood(client.send_media_group)(chat_id, media_docs)
-            else:
-                messages = await retry_on_flood(client.send_message)(chat_id, success_caption)
-            
-            if messages and download:
-                for message in messages:
-                    if message.document:
-                        if message.document.file_name.endswith('.pdf'):
-                            file_id = message.document.file_id
-                            file_unique_id = message.document.file_unique_id
-                        elif message.document.file_name.endswith('.cbz'):
-                            cbz_id = message.document.file_id
-                            cbz_unique_id = message.document.file_unique_id
-        except Exception as e:
-            await handle_error(client, chat_id, e, error_caption)
-        finally:
-            if download:
-                shutil.rmtree(pictures_folder, ignore_errors=True)
-                await add(db, "chapter_files", {
-                    "_id": chapter.url,
-                    "file_id": file_id,
-                    "file_unique_id": file_unique_id,
-                    "cbz_id": cbz_id,
-                    "cbz_unique_id": cbz_unique_id,
-                    "telegraph_url": telegraph_url
-                })
+    media_docs = []
+
+    if options & OutputOptions.PDF:
+        if file_id:
+            media_docs.append(InputMediaDocument(file_id))
+        else:
+            try:
+                pdf = await asyncio.get_running_loop().run_in_executor(None, fld2pdf, pictures_folder, ch_name)
+            except Exception as e:
+                logger.exception(f'Error creating pdf for {chapter.name} - {chapter.manga.name}\n{e}')
+                return await client.send_message(chat_id, f'There was an error making the pdf for this chapter. '
+                                                       f'Forward this message to the bot group to report the '
+                                                       f'error.\n\n{error_caption}')
+            media_docs.append(InputMediaDocument(pdf, thumb=thumb_path))
+
+    if options & OutputOptions.CBZ:
+        if cbz_id:
+            media_docs.append(InputMediaDocument(cbz_id))
+        else:
+            try:
+                cbz = await asyncio.get_running_loop().run_in_executor(None, fld2cbz, pictures_folder, ch_name)
+            except Exception as e:
+                logger.exception(f'Error creating cbz for {chapter.name} - {chapter.manga.name}\n{e}')
+                return await client.send_message(chat_id, f'There was an error making the cbz for this chapter. '
+                                                       f'Forward this message to the bot group to report the '
+                                                       f'error.\n\n{error_caption}')
+            media_docs.append(InputMediaDocument(cbz, thumb=thumb_path))
+
+    if len(media_docs) == 0:
+        messages: list[Message] = await retry_on_flood(client.send_message)(chat_id, success_caption)
+    else:
+        media_docs[-1].caption = success_caption
+        messages: list[Message] = await retry_on_flood(client.send_media_group)(chat_id, media_docs)
+
+    # Save file ids
+    if download and media_docs:
+        for message in [x for x in messages if x.document]:
+            if message.document.file_name.endswith('.pdf'):
+                file_id = message.document.file_id
+                file_unique_id = message.document.file_unique_id
+            elif message.document.file_name.endswith('.cbz'):
+                cbz_id = message.document.file_id
+                cbz_unique_id = message.document.file_unique_id
+
+    chapter_file_dict = {
+        "_id": chapter.url,
+        "file_id": file_id,
+        "file_unique_id": file_unique_id,
+        "cbz_id": cbz_id,
+        "cbz_unique_id": cbz_unique_id,
+        "telegraph_url": telegraph_url
+    }
+
+    if download:
+        shutil.rmtree(pictures_folder, ignore_errors=True)
+        print(f"{chapter_file_dict}")
+        await add(db, "chapter_files", chapter_file_dict)
 
 
 async def pagination_click(client: Client, callback: CallbackQuery):
@@ -609,15 +639,15 @@ async def update_mangas():
     manga_dict = dict()
 
     for subscription in subscriptions:
-        if subscription.url not in subs_dictionary:
-            subs_dictionary[subscription.url] = []
-        subs_dictionary[subscription.url].append(subscription.user_id)
+        if subscription.get("url") not in subs_dictionary:
+            subs_dictionary[subscription.get("ur")] = []
+        subs_dictionary[subscription.get("url")].append(subscription.get("user_id"))
 
     for last_chapter in last_chapters:
-        chapters_dictionary[last_chapter.url] = last_chapter
+        chapters_dictionary[last_chapter.get("url")] = last_chapter
 
     for manga in manga_names:
-        manga_dict[manga['url']] = manga
+        manga_dict[manga.get("url")] = manga
 
     for url in subs_dictionary:
         for ident, client in plugins.items():
@@ -652,7 +682,7 @@ async def update_mangas():
         try:
             if url not in manga_dict:
                 continue
-            manga_name = manga_dict[url]['name']
+            manga_name = manga_dict[url].name
             if url not in chapters_dictionary:
                 agen = client.iter_chapters(url, manga_name)
                 last_chapter = await anext(agen)
