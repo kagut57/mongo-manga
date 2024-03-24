@@ -247,16 +247,25 @@ async def on_refresh(client: Client, message: Message):
 @bot.on_message(filters=filters.command(['subs']))
 async def on_subs(client: Client, message: Message):
     db = await mongodb()
+    user_id = str(message.from_user.id)
     filter_string = message.text.split(maxsplit=1)[1] if message.text.split(maxsplit=1)[1:] else ''
     filter_list = [filter_.strip() for filter_ in filter_string.split(' ') if filter_.strip()]
 
-    subs = await get_subs(db, str(message.from_user.id), filter_list)
+    subs = await get_all(db, "subscriptions")
+    manga_names = await get_all(db, "manga_names")
+
+    filtered_subs = [sub for sub in subs if sub.get("user_id") == user_id]
+
+    if filter_string:
+        filtered_subs = [sub for sub in filtered_subs if any(filter_ in sub.get("url") for filter_ in filter_list)]
 
     lines = []
-    for sub in subs[:10]:
-        lines.append(f'<a href="{sub.url}">{sub.name}</a>')
-        lines.append(f'`/cancel {sub.url}`')
-        lines.append('')
+    for sub in filtered_subs[:10]:
+        matching_manga = next((manga for manga in manga_names if manga.get("url") == sub.get("url")), None)
+        if matching_manga:
+            lines.append(f'<a href="{sub.get("url")}">{matching_manga.get("name")}</a>')
+            lines.append(f'`/cancel {sub.get("url")}`')
+            lines.append('')
 
     if not lines:
         if filter_string:
