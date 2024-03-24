@@ -237,18 +237,18 @@ async def on_subs(client: Client, message: Message):
 
 @bot.on_message(filters=filters.regex(r'^/cancel ([^ ]+)$'))
 async def on_cancel_command(client: Client, message: Message):
-    db = DB(mongo_url)
-    sub = await db.get(Subscription, (message.matches[0].group(1), str(message.from_user.id)))
+    manga_url = message.matches[0].group(1)
+    user_id = str(message.from_user.id)
+    query = {"url": manga_url, "user_id": user_id}
+    sub = await get(db, "subscriptions", query) 
     if not sub:
         return await message.reply("You were not subscribed to that manga.")
-    await db.erase(sub)
+    await delete(db, "subscriptions", sub["_id"])
     return await message.reply("You will no longer receive updates for that manga.")
-
 
 @bot.on_message(filters=filters.command(['options']))
 async def on_options_command(client: Client, message: Message):
-    db = DB(mongo_url)
-    user_options = await db.get(MangaOutput, str(message.from_user.id))
+    user_options = await get(db, "manga_output", str(message_from.user.id))
     user_options = user_options.output if user_options else (1 << 30) - 1
     buttons = get_buttons_for_options(user_options)
     return await message.reply("Select the desired output format.", reply_markup=buttons)
