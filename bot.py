@@ -122,9 +122,6 @@ bot = Client('bot',
 
 pdf_queue = AQueue()
 
-db = await mongodb()
-LastChapter = await get_all(db, "last_chapters")
-
 
 @bot.on_message(filters=~(filters.private & filters.incoming))
 async def on_chat_or_channel_message(client: Client, message: Message):
@@ -188,6 +185,7 @@ async def on_help(client: Client, message: Message):
 
 @bot.on_message(filters=filters.command(['refresh']))
 async def on_refresh(client: Client, message: Message):
+    db = await mongodb()
     text = message.reply_to_message.text or message.reply_to_message.caption
     if text:
         regex = re.compile(r'\[Read on telegraph]\((.*)\)')
@@ -210,6 +208,7 @@ async def on_refresh(client: Client, message: Message):
 
 @bot.on_message(filters=filters.command(['subs']))
 async def on_subs(client: Client, message: Message):
+    db = await mongodb()
     filter_string = message.text.split(maxsplit=1)[1] if message.text.split(maxsplit=1)[1:] else ''
     filter_list = [filter_.strip() for filter_ in filter_string.split(' ') if filter_.strip()]
 
@@ -232,6 +231,7 @@ async def on_subs(client: Client, message: Message):
 
 @bot.on_message(filters=filters.regex(r'^/cancel ([^ ]+)$'))
 async def on_cancel_command(client: Client, message: Message):
+    db = await mongodb()
     manga_url = message.matches[0].group(1)
     user_id = str(message.from_user.id)
     query = {"url": manga_url, "user_id": user_id}
@@ -243,6 +243,7 @@ async def on_cancel_command(client: Client, message: Message):
 
 @bot.on_message(filters=filters.command(['options']))
 async def on_options_command(client: Client, message: Message):
+    db = await mongodb()
     user_options = await get(db, "manga_output", str(message_from.user.id))
     user_options = user_options.output if user_options else (1 << 30) - 1
     buttons = get_buttons_for_options(user_options)
@@ -271,6 +272,7 @@ output_dict = {
 }
 
 async def options_click(client, callback: CallbackQuery):
+    db = await mongodb()
     user_id = str(callback.from_user.id)
     user_options = await get(db, "manga_output", user_id)
     if not user_options:
@@ -299,6 +301,7 @@ async def language_click(client, callback: CallbackQuery):
 
 
 async def plugin_click(client, callback: CallbackQuery):
+    db = await mongodb()
     manga_client, query = queries[callback.data]
     results = await manga_client.search(query)
     if not results:
@@ -314,6 +317,7 @@ async def plugin_click(client, callback: CallbackQuery):
 
 
 async def manga_click(client, callback: CallbackQuery, pagination: Pagination = None):
+    db = await mongodb()
     if pagination is None:
         pagination = Pagination()
         paginations[pagination.id] = pagination
@@ -393,7 +397,7 @@ async def chapter_click(client, data, chat_id):
 
 
 async def send_manga_chapter(client: Client, chapter, chat_id):
-    
+    db = await mongodb()
     chapter_file = await get(db, "chapter_files", chapter.url)
     print(f"{chapter_file}")
     options = await get(db, "manga_output", str(message_from.user.id))
@@ -507,6 +511,7 @@ async def full_page_click(client: Client, callback: CallbackQuery):
 
 
 async def favourite_click(client: Client, callback: CallbackQuery):
+    db = await mongodb()
     action, data = callback.data.split('_')
     fav = action == 'fav'
     manga = favourites[callback.data]
@@ -590,10 +595,12 @@ async def on_callback_query(client, callback: CallbackQuery):
 
 
 async def remove_subscriptions(sub: str):
+    db = await mongodb()
     await db.erase_subs(sub)
 
 
 async def update_mangas():
+    db = await mongodb()
     logger.debug("Updating mangas")
     subscriptions = await get_all(db, "subscription")
     last_chapters = await get_all(db, "last_chapters")
