@@ -637,30 +637,34 @@ async def update_mangas():
     manga_dict = dict()
 
     for subscription in subscriptions:
-        if subscription.get("url") not in subs_dictionary:
-            subs_dictionary[subscription.get("url")] = []
-        subs_dictionary[subscription.get("url")].append(subscription.get("user_id"))
+        sub_url = subscription.get("url")
+        sub_user_id = subscription.get("user_id")
+        if sub_url not in subs_dictionary:
+            subs_dictionary[sub_url] = []
+        subs_dictionary[sub_url].append(sub_user_id)
 
     for last_chapter in last_chapters:
-        chapters_dictionary[last_chapter.get("url")] = last_chapter
+        lc_url = last_chapter.get("url")
+        chapters_dictionary[lc_url] = last_chapter
 
     for manga in manga_names:
-        manga_dict[manga.get("url")] = manga
+        m_name = manga.get("url")
+        manga_dict[m_name] = manga
 
-    for url in subs_dictionary:
+    for sub_url in subs_dictionary:
         for ident, client in plugins.items():
             if ident in subsPaused:
                 continue
-            if await client.contains_url(url):
-                url_client_dictionary[url] = client
-                client_url_dictionary[client].add(url)
+            if await client.contains_url(sub_url):
+                url_client_dictionary[sub_url] = client
+                client_url_dictionary[client].add(sub_url)
 
     for client, urls in client_url_dictionary.items():
         logger.debug(f'Updating {client.name}')
         logger.debug(f'Urls:\t{list(urls)}')
-        new_urls = [url for url in urls if not chapters_dictionary.get("url")]
+        new_urls = [url for url in urls if not chapters_dictionary.get(url)]
         logger.debug(f'New Urls:\t{new_urls}')
-        to_check = [chapters_dictionary[url] for url in urls if chapters_dictionary.get("url")]
+        to_check = [chapters_dictionary[url] for url in urls if chapters_dictionary.get(url)]
         if len(to_check) == 0:
             continue
         try:
@@ -680,7 +684,7 @@ async def update_mangas():
         try:
             if url not in manga_dict:
                 continue
-            manga_name = manga_dict[url]["name"]
+            manga_name = manga_dict[url].name
             if url not in chapters_dictionary:
                 agen = client.iter_chapters(url, manga_name)
                 last_chapter = await anext(agen)
@@ -717,10 +721,10 @@ async def update_mangas():
             logger.exception(f'An exception occurred getting new chapters for url {url}: {e}')
 
     blocked = set()
-    for url, chapter_list in updated.items():
+    for sub_url, chapter_list in updated.items():
         for chapter in chapter_list:
             logger.debug(f'Updating {chapter.manga.name} - {chapter.name}')
-            for sub in subs_dictionary[url]:
+            for sub in subs_dictionary[sub_url]:
                 if sub in blocked:
                     continue
                 try:
