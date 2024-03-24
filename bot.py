@@ -471,10 +471,6 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
             try:
                 pdf = await asyncio.get_running_loop().run_in_executor(None, fld2pdf, pictures_folder, ch_name)
                 media_docs.append(InputMediaDocument(pdf, thumb=thumb_path))
-                if not chapter_file:
-                    chapter_file = ChapterFile(id=chapter.url, file_id=message.document.file_id, file_unique_id=message.document.file_unique_id, cbz_id=None, cbz_unique_id=None, telegraph_url=None)
-                else:
-                    chapter_file = chapter_file._replace(file_id=message.document.file_id, file_unique_id=message.document.file_unique_id)
             except Exception as e:
                 logger.exception(f'Error creating pdf for {chapter.name} - {chapter.manga.name}\n{e}')
                 await client.send_message(chat_id, f'There was an error making the pdf for this chapter. '
@@ -488,10 +484,6 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
             try:
                 cbz = await asyncio.get_running_loop().run_in_executor(None, fld2cbz, pictures_folder, ch_name)
                 media_docs.append(InputMediaDocument(cbz, thumb=thumb_path))
-                if not chapter_file:
-                    chapter_file = ChapterFile(id=chapter.url, file_id=None, file_unique_id=None, cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id, telegraph_url=None)
-                else:
-                    chapter_file = chapter_file._replace(cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id)
             except Exception as e:
                 logger.exception(f'Error creating cbz for {chapter.name} - {chapter.manga.name}\n{e}')
                 await client.send_message(chat_id, f'There was an error making the cbz for this chapter. '
@@ -517,7 +509,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                             chapter_file.file_id = message.document.file_id
                             chapter_file.file_unique_id = message.document.file_unique_id
                     else:
-                        chapter_file = ChapterFile(id=chapter.url, file_id=message.document.file_id, file_unique_id=message.document.file_unique_id, cbz_id=None, cbz_unique_id=None, telegraph_url=None)
+                        pass
                 elif message.document.file_name.endswith('.cbz'):
                     if chapter_file:
                         if isinstance(chapter_file, dict):
@@ -526,7 +518,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
                             chapter_file.cbz_id = message.document.file_id
                             chapter_file.cbz_unique_id = message.document.file_unique_id
                     else:
-                        chapter_file = ChapterFile(id=chapter.url, file_id=None, file_unique_id=None, cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id, telegraph_url=None)
+                        pass
 
     chapter_file_dict = {
         "_id": chapter.url,
@@ -540,7 +532,7 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     if download:
         shutil.rmtree(pictures_folder, ignore_errors=True)
         print(f"{chapter_file}")
-        await add(db, "chapter_file", chapter_file_dict)
+        await add(db, "chapter_files", chapter_file_dict)
 
 
 async def pagination_click(client: Client, callback: CallbackQuery):
