@@ -213,12 +213,10 @@ async def on_refresh(client: Client, message: Message):
 async def on_subs(client: Client, message: Message):
     db = DB(mongo_url)
 
-    filter_ = message.text.split(maxsplit=1)[1] if message.text.split(maxsplit=1)[1:] else ''
-    filter_list = [filter_.strip() for filter_ in filter_.split(' ') if filter_.strip()]
+    filter_string = message.text.split(maxsplit=1)[1] if message.text.split(maxsplit=1)[1:] else ''
+    filter_list = [filter_.strip() for filter_ in filter_string.split(' ') if filter_.strip()]
 
     subs = await db.get_subs(str(message.from_user.id), filter_list)
-
-    print("Subscriptions:", subs)  # Add this line for debugging
 
     lines = []
     for sub in subs[:10]:
@@ -227,7 +225,7 @@ async def on_subs(client: Client, message: Message):
         lines.append('')
 
     if not lines:
-        if filter_:
+        if filter_string:
             return await message.reply("You have no subscriptions with that filter.")
         return await message.reply("You have no subscriptions yet.")
 
