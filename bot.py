@@ -250,7 +250,7 @@ async def on_subs(client: Client, message: Message):
     filter_string = message.text.split(maxsplit=1)[1] if message.text.split(maxsplit=1)[1:] else ''
     filter_list = [filter_.strip() for filter_ in filter_string.split(' ') if filter_.strip()]
 
-    subs = await db.get_subs(str(message.from_user.id), filter_list)
+    subs = await get_subs(db, str(message.from_user.id), filter_list)
 
     lines = []
     for sub in subs[:10]:
@@ -462,6 +462,10 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
             try:
                 pdf = await asyncio.get_running_loop().run_in_executor(None, fld2pdf, pictures_folder, ch_name)
                 media_docs.append(InputMediaDocument(pdf, thumb=thumb_path))
+                if not chapter_file:
+                    chapter_file = ChapterFile(_id=chapter.url, file_id=message.document.file_id, file_unique_id=message.document.file_unique_id, cbz_id=None, cbz_unique_id=None, telegraph_url=None)
+                else:
+                    chapter_file = chapter_file._replace(file_id=message.document.file_id, file_unique_id=message.document.file_unique_id)
             except Exception as e:
                 logger.exception(f'Error creating pdf for {chapter.name} - {chapter.manga.name}\n{e}')
                 await client.send_message(chat_id, f'There was an error making the pdf for this chapter. '
@@ -475,6 +479,10 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
             try:
                 cbz = await asyncio.get_running_loop().run_in_executor(None, fld2cbz, pictures_folder, ch_name)
                 media_docs.append(InputMediaDocument(cbz, thumb=thumb_path))
+                if not chapter_file:
+                    chapter_file = ChapterFile(_id=chapter.url, file_id=None, file_unique_id=None, cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id, telegraph_url=None)
+                else:
+                    chapter_file = chapter_file._replace(cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id)
             except Exception as e:
                 logger.exception(f'Error creating cbz for {chapter.name} - {chapter.manga.name}\n{e}')
                 await client.send_message(chat_id, f'There was an error making the cbz for this chapter. '
@@ -491,18 +499,25 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
     # Save file ids
     if download and media_docs:
         for message in [x for x in messages if x.document]:
-            if message.document.file_name.endswith('.pdf'):
-                if isinstance(chapter_file, dict):
-                    chapter_file['file_id'] = message.document.file_id
-                else:
-                    chapter_file.file_id = message.document.file_id
-                    chapter_file.file_unique_id = message.document.file_unique_id
-            elif message.document.file_name.endswith('.cbz'):
-                if isinstance(chapter_file, dict):
-                    chapter_file['cbz_id'] = message.document.file_id
-                else:
-                    chapter_file.cbz_id = message.document.file_id
-                    chapter_file.cbz_unique_id = message.document.file_unique_id
+            if message.document:
+                if message.document.file_name.endswith('.pdf'):
+                    if chapter_file:
+                        if isinstance(chapter_file, dict):
+                            chapter_file['file_id'] = message.document.file_id
+                        else:
+                            chapter_file.file_id = message.document.file_id
+                            chapter_file.file_unique_id = message.document.file_unique_id
+                    else:
+                        chapter_file = ChapterFile(_id=chapter.url, file_id=message.document.file_id, file_unique_id=message.document.file_unique_id, cbz_id=None, cbz_unique_id=None, telegraph_url=None)
+                elif message.document.file_name.endswith('.cbz'):
+                    if chapter_file:
+                        if isinstance(chapter_file, dict):
+                            chapter_file['cbz_id'] = message.document.file_id
+                        else:
+                            chapter_file.cbz_id = message.document.file_id
+                            chapter_file.cbz_unique_id = message.document.file_unique_id
+                    else:
+                        chapter_file = ChapterFile(_id=chapter.url, file_id=None, file_unique_id=None, cbz_id=message.document.file_id, cbz_unique_id=message.document.file_unique_id, telegraph_url=None)
 
     chapter_file_dict = {
         "_id": chapter.url,
