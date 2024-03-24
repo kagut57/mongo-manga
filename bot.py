@@ -418,7 +418,6 @@ async def chapter_click(client, data, chat_id):
 async def send_manga_chapter(client: Client, chapter, chat_id):
     db = await mongodb()
     chapter_file = await get(db, "chapter_files", {"_id": chapter.url})
-    print(f"chapter_file")
     options = await get(db, "manga_output", str(chat_id))
     options = options.get("output", (1 << 30) - 1) if options else (1 << 30) - 1
     if chapter_file:
@@ -517,7 +516,6 @@ async def send_manga_chapter(client: Client, chapter, chat_id):
 
     if download:
         shutil.rmtree(pictures_folder, ignore_errors=True)
-        print(f"{chapter_file_dict}")
         await add(db, "chapter_files", chapter_file_dict)
 
 
