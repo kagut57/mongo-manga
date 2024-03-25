@@ -639,7 +639,7 @@ async def update_mangas():
         subs_dictionary[subscription.get("url")].append(subscription.get("user_id"))
 
     for last_chapter in last_chapters:
-        chapters_dictionary[last_chapter.get("url")] = last_chapter
+        chapters_dictionary[last_chapter.url] = last_chapter
 
     for manga in manga_names:
         manga_dict[manga.get("url")] = manga
