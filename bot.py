@@ -620,115 +620,104 @@ async def remove_subscriptions(sub: str):
     await db.erase_subs(sub)
 
 
-async def fetch_subscriptions(db):
-    return await get_all(db, "subscriptions")
-
-async def fetch_last_chapters(db):
-    return await get_all(db, "last_chapters")
-
-async def fetch_manga_names(db):
-    return await get_all(db, "manga_names")
-
-async def update_subs_dictionary(subscriptions):
-    subs_dictionary = {}
-    for subscription in subscriptions:
-        sub_url = subscription.get("url")
-        sub_user_id = subscription.get("user_id")
-        subs_dictionary.setdefault(sub_url, []).append(sub_user_id)
-    return subs_dictionary
-
-async def update_chapters_dictionary(last_chapters):
-    return {lc.get("url"): lc for lc in last_chapters if "url" in lc}
-
-async def update_manga_dict(manga_names):
-    return {manga["url"]: manga for manga in manga_names if "url" in manga}
-
 async def update_mangas():
     db = await mongodb()
     logger.debug("Updating mangas")
+    subscriptions = await get_all(db, "subscriptions")
+    last_chapters = await get_all(db, "last_chapters")
+    manga_names = await get_all(db, "manga_names")
 
-    subscriptions = await fetch_subscriptions(db)
-    last_chapters = await fetch_last_chapters(db)
-    manga_names = await fetch_manga_names(db)
-    print(f"{last_chapters}")
-
-    subs_dictionary = await update_subs_dictionary(subscriptions)
-    chapters_dictionary = await update_chapters_dictionary(last_chapters)
-    manga_dict = await update_manga_dict(manga_names)
-
+    subs_dictionary = dict()
+    chapters_dictionary = dict()
+    url_client_dictionary = dict()
     client_url_dictionary = {client: set() for client in plugins.values()}
-    url_client_dictionary = {}
+    manga_dict = dict()
 
-    for sub_url in subs_dictionary:
+    for subscription in subscriptions:
+        if subscription.url not in subs_dictionary:
+            subs_dictionary[subscription.url] = []
+        subs_dictionary[subscription.url].append(subscription.user_id)
+
+    for last_chapter in last_chapters:
+        chapters_dictionary[last_chapter.url] = last_chapter
+
+    for manga in manga_names:
+        manga_dict[manga.url] = manga
+
+    for url in subs_dictionary:
         for ident, client in plugins.items():
             if ident in subsPaused:
                 continue
-            if await client.contains_url(sub_url):
-                url_client_dictionary[sub_url] = client
-                client_url_dictionary[client].add(sub_url)
+            if await client.contains_url(url):
+                url_client_dictionary[url] = client
+                client_url_dictionary[client].add(url)
 
     for client, urls in client_url_dictionary.items():
         logger.debug(f'Updating {client.name}')
         logger.debug(f'Urls:\t{list(urls)}')
-        new_urls = [url for url in urls if url not in chapters_dictionary]
+        new_urls = [url for url in urls if not chapters_dictionary.get(url)]
         logger.debug(f'New Urls:\t{new_urls}')
-        to_check = [chapters_dictionary[url] for url in urls if url in chapters_dictionary]
-        if not to_check:
+        to_check = [chapters_dictionary[url] for url in urls if chapters_dictionary.get(url)]
+        if len(to_check) == 0:
             continue
         try:
             updated, not_updated = await client.check_updated_urls(to_check)
-        except Exception as e:
+        except BaseException as e:
             logger.exception(f"Error while checking updates for site: {client.name}, err: {e}")
             updated = []
             not_updated = list(urls)
         for url in not_updated:
-            url_client_dictionary.pop(url, None)
+            del url_client_dictionary[url]
         logger.debug(f'Updated:\t{list(updated)}')
         logger.debug(f'Not Updated:\t{list(not_updated)}')
 
-    updated = {}
+    updated = dict()
 
     for url, client in url_client_dictionary.items():
         try:
             if url not in manga_dict:
                 continue
-            manga_name = manga_dict.get(url, {}).get("name")
+            manga_name = manga_dict[url].name
             if url not in chapters_dictionary:
                 agen = client.iter_chapters(url, manga_name)
                 last_chapter = await anext(agen)
                 last_chapter_dict = {
-                    "url": url,
+                    "_id": url,
                     "chapter_url": last_chapter.url
                 }
                 await add(db, "last_chapters", last_chapter_dict)
                 await asyncio.sleep(10)
             else:
                 last_chapter = chapters_dictionary[url]
-                new_chapters = []
+                new_chapters: List[MangaChapter] = []
                 counter = 0
                 async for chapter in client.iter_chapters(url, manga_name):
-                    if chapter.url == last_chapter["chapter_url"]:
+                    if chapter.url == last_chapter.chapter_url:
                         break
                     new_chapters.append(chapter)
                     counter += 1
                     if counter == 20:
                         break
                 if new_chapters:
-                    last_chapter["chapter_url"] = new_chapters[0].url
+                    last_chapter.chapter_url = new_chapters[0].url
                     last_chapter_dict = {
-                        "url": url,
+                        "_id": url,
                         "chapter_url": new_chapters[0].url
                     }
                     await add(db, "last_chapters", last_chapter_dict)
                     updated[url] = list(reversed(new_chapters))
-        except Exception as e:
+                    for chapter in new_chapters:
+                        if chapter.unique() not in chapters:
+                            chapters[chapter.unique()] = chapter
+                await asyncio.sleep(1)
+        except BaseException as e:
             logger.exception(f'An exception occurred getting new chapters for url {url}: {e}')
 
     blocked = set()
-    for sub_url, chapter_list in updated.items():
+    for url, chapter_list in updated.items():
         for chapter in chapter_list:
             logger.debug(f'Updating {chapter.manga.name} - {chapter.name}')
-            for sub in subs_dictionary[sub_url]:
+            for sub in subs_dictionary[url]:
                 if sub in blocked:
                     continue
                 try:
