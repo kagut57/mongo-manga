@@ -566,7 +566,7 @@ async def favourite_click(client: Client, callback: CallbackQuery):
     await bot.edit_message_reply_markup(callback.from_user.id, callback.message.id,
                                         InlineKeyboardMarkup(keyboard))
     
-    db_manga = await get(db, "manga_names", manga.url)
+    db_manga = await get(db, "manga_names", {"url": manga.url})
     if not db_manga:
         await add(db, "manga_names", manga_name_dict)
 
