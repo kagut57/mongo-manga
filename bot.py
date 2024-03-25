@@ -658,7 +658,7 @@ async def update_mangas():
         logger.debug(f'Urls:\t{list(urls)}')
         new_urls = [url for url in urls if not chapters_dictionary.get(url)]
         logger.debug(f'New Urls:\t{new_urls}')
-        to_check = [chapters_dictionary["url"] for url in urls if chapters_dictionary.get(url)]
+        to_check = [chapters_dictionary[url] for url in urls if chapters_dictionary.get("url")]
         if len(to_check) == 0:
             continue
         try:
