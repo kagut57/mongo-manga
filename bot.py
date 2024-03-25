@@ -218,26 +218,34 @@ async def on_help(client: Client, message: Message):
 @bot.on_message(filters=filters.command(['refresh']))
 async def on_refresh(client: Client, message: Message):
     db = await mongodb()
+    chapters = await get_all(db, "chapter_files")
+    
     text = message.reply_to_message.text or message.reply_to_message.caption
     if text:
         regex = re.compile(r'\[Read on telegraph]\((.*)\)')
         match = regex.search(text.markdown)
     else:
         match = None
+    document = None
     document = message.reply_to_message.document
     if not (message.reply_to_message and message.reply_to_message.outgoing and
             ((document and document.file_name[-4:].lower() in ['.pdf', '.cbz']) or match)):
         return await message.reply("This command only works when it replies to a manga file that bot sent to you")
-    if document:
-        chapter = await db.get_chapter_file_by_id(document.file_unique_id)
-    else:
-        chapter = await db.get_chapter_file_by_id(match.group(1))
-    if not chapter:
-        return await message.reply("This file was already refreshed")
-    await delete(db, "chapter_files", chapter)
-    return await message.reply("File refreshed successfully!")
+    
+    for chapter in chapters:
+        pdf = chapter.get("file_unique_id")
+        cbz = chapter.get("cbz_unique_id")
+        t_url = chapter.get("telegraph_url")
 
-
+        if document and (pdf == document.file_unique_id or cbz == document.file_unique_id):
+            await delete(db, "chapter_files", chapter["_id"])
+            return await message.reply("File refreshed successfully!")
+        elif match and t_url == match.group(1):
+            await delete(db, "chapter_files", chapter["_id"])
+            return await message.reply("File refreshed successfully!")
+    
+    return await message.reply("This file was already refreshed")
+    
 @bot.on_message(filters=filters.command(['subs']))
 async def on_subs(client: Client, message: Message):
     db = await mongodb()
