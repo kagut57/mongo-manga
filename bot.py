@@ -406,13 +406,12 @@ async def get_user_lock(chat_id: int):
 
 async def chapter_click(client, data, chat_id):
     await pdf_queue.put(chapters[data], int(chat_id))
-    logger.debug(f"Put chapter {chapters[data].name} to queue for user {chat_id} - queue size: {pdf_queue.qsize()}")
 
 
 async def send_manga_chapter(client: Client, chapter, chat_id):
     db = await mongodb()
     chapter_file = await get(db, "chapter_files", {"_id": chapter.url})
-    options = await get(db, "manga_output", str(chat_id))
+    options = await get(db, "manga_output", {"_id": str(chat_id)})
     options = options.get("output", (1 << 30) - 1) if options else (1 << 30) - 1
     if chapter_file:
         file_id = chapter_file.get("file_id")
@@ -720,7 +719,6 @@ async def update_mangas():
                     continue
                 try:
                     await pdf_queue.put(chapter, int(sub))
-                    logger.debug(f"Put chapter {chapter} to queue for user {sub} - queue size: {pdf_queue.qsize()}")
                 except pyrogram.errors.UserIsBlocked:
                     logger.info(f'User {sub} blocked the bot')
                     await remove_subscriptions(sub)
@@ -754,7 +752,6 @@ async def chapter_creation(worker_id: int = 0):
     logger.debug(f"Worker {worker_id}: Starting worker")
     while True:
         chapter, chat_id = await pdf_queue.get(worker_id)
-        logger.debug(f"Worker {worker_id}: Got chapter '{chapter.name}' from queue for user '{chat_id}'")
         try:
             await send_manga_chapter(bot, chapter, chat_id)
         except:
