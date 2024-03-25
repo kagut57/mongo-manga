@@ -14,14 +14,7 @@ async def add(db, collection_name, data):
     if "_id" not in data:
         result = await db[collection_name].insert_one(data)
     else:
-        # If you want to update only chapter_url and keep url same
-        if 'url' in data and 'chapter_url' in data:
-            result = await db[collection_name].update_one(
-                {"url": data["url"]},  # query
-                {"$set": {"chapter_url": data["chapter_url"]}}  # new value
-            )
-        else:
-            result = await db[collection_name].update_one({"_id": data["_id"]}, {"$set": data}, upsert=True)
+        result = await db[collection_name].update_one({"_id": data["_id"]}, {"$set": data}, upsert=True)
     return result
 
 async def get(db: AsyncIOMotorDatabase, collection_name: str, query: dict):
