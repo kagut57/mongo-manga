@@ -11,6 +11,7 @@ import pyrogram.errors
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaDocument
 
 from config import env_vars, mongo_url
+from models import LastChapter
 from img2cbz.core import fld2cbz
 from img2pdf.core import fld2pdf, fld2thumb
 from img2tph.core import img2tph
@@ -657,7 +658,7 @@ async def update_mangas():
         logger.debug(f'Urls:\t{list(urls)}')
         new_urls = [url for url in urls if not chapters_dictionary.get(url)]
         logger.debug(f'New Urls:\t{new_urls}')
-        to_check = [chapters_dictionary[url] for url in urls if chapters_dictionary.get(url)]
+        to_check = [chapters_dictionary["url"] for url in urls if chapters_dictionary.get(url)]
         if len(to_check) == 0:
             continue
         try:
