@@ -142,10 +142,7 @@ async def options_click(client, callback: CallbackQuery):
     user_options = await get(db, "manga_output", user_id)
     
     if user_options is None:
-        user_options = {
-            "_id": user_id,
-            "output": (1 << 30) - 1
-        }
+        user_options = (1 << 30) - 1
     else:
         user_options = user_options.get("output", (1 << 30) - 1)
     
