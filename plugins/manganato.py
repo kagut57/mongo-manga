@@ -15,7 +15,7 @@ class ManganatoClient(MangaClient):
     search_url = urljoin(base_url.geturl(), 'getstorysearchjson')
     search_param = 'searchword'
     read_url = 'https://readmanganato.com/'
-    chap_url = 'https://chapmanganato.com/'
+    chap_url = 'https://chapmanganato.to/'
 
     pre_headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0'
